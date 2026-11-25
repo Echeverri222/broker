@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+rm -f tmp/pids/server.pid
+bin/rails db:prepare
+# Solid Cache / Solid Queue live in their own databases; load their schemas once.
+bin/rails runner 'exit(SolidCache::Entry.connection.table_exists?("solid_cache_entries") ? 0 : 1)' || bin/rails db:schema:load:cache
+bin/rails runner 'exit(SolidQueue::Job.connection.table_exists?("solid_queue_jobs") ? 0 : 1)' || bin/rails db:schema:load:queue
+bin/rails db:seed
+exec bin/rails server -b 0.0.0.0 -p 3000

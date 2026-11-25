@@ -1,0 +1,13 @@
+node_modules/
+frontend/dist/
+backend/log/*
+backend/tmp/*
+!backend/log/.keep
+!backend/tmp/.keep
+backend/config/master.key
+backend/coverage/
+.env
+.DS_Store
+frontend/coverage/
+frontend/test-results/
+frontend/playwright-report/

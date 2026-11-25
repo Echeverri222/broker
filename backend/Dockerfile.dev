@@ -1,0 +1,8 @@
+FROM ruby:3.4
+RUN apt-get update -qq && apt-get install -y --no-install-recommends libpq-dev postgresql-client curl && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY Gemfile Gemfile.lock ./
+RUN bundle install
+COPY . .
+ENV RAILS_ENV=development
+EXPOSE 3000

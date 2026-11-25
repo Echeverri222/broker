@@ -1,0 +1,31 @@
+# Recurring tasks (Solid Queue). Both jobs are idempotent.
+default: &default
+  refresh_quotes:
+    class: RefreshQuotesJob
+    schedule: every minute
+  fill_pending_orders:
+    class: FillPendingOrdersJob
+    schedule: every minute
+  warm_market_data:
+    class: WarmMarketDataJob
+    schedule: every hour at minute 7
+  snapshots_hourly:
+    class: SnapshotsJob
+    args: ["hourly"]
+    schedule: <%= ENV.fetch("SNAPSHOT_SCHEDULE", "every hour at minute 0") %>
+  snapshots_close:
+    class: SnapshotsJob
+    args: ["close"]
+    schedule: every weekday at 4:05pm America/New_York
+  splits:
+    class: SplitsJob
+    schedule: every weekday at 6:00am America/New_York
+  clear_finished_jobs:
+    command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
+    schedule: every hour at minute 12
+
+development:
+  <<: *default
+test: {}
+production:
+  <<: *default

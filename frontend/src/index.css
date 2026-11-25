@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* DSN-01: every colour, radius and spacing value is defined once, here. Components only use these variables
+   (directly or through the Tailwind theme below); no hex values anywhere else. */
+:root {
+  --bg: #F3F2EF; --card: #FFFFFF; --well: #ECEBE7; --line: #E4E2DC; --ink: #111114; --mute: #6B6B73;
+  --accent: #2F66D9; --accent-ink: #FFFFFF; --chart: #2F66D9; --bench: #B4B3AD;
+  --gain: #12803F; --loss: #C62F2F; --amber: #A85F12; --amber-bg: #FFF3E3; --amber-ink: #6B3D0C;
+  --bar: #6C9BEF; --bar2: #D08A45; --logo: #F0EFEB; --sma1: #D08A45; --sma2: #8B5CF6;
+  --scrim: rgb(17 17 20 / 0.4);
+  --radius-card: 24px; --radius-ctl: 12px; --gutter: 32px;
+}
+:root[data-theme="dark"] {
+  --bg: #0D0E13; --card: #15171E; --well: #1E212A; --line: #262A34; --ink: #ECEDF2; --mute: #9A9DAD;
+  --accent: #6E7BFF; --accent-ink: #0D0E13; --chart: #8FA0FF; --bench: #5C6070;
+  --gain: #4FD1A0; --loss: #FF7A8A; --amber: #E5A55E; --amber-bg: #2A2114; --amber-ink: #F3D3A6;
+  --bar: #6E7BFF; --bar2: #E5A55E; --logo: #232734; --sma1: #E5A55E; --sma2: #B79CFF;
+  --scrim: rgb(0 0 0 / 0.55);
+}
+@media (max-width: 767px) { :root { --gutter: 16px; } }
+
+@theme inline {
+  --color-bg: var(--bg); --color-card: var(--card); --color-well: var(--well); --color-line: var(--line);
+  --color-ink: var(--ink); --color-mute: var(--mute); --color-accent: var(--accent); --color-accent-ink: var(--accent-ink);
+  --color-gain: var(--gain); --color-loss: var(--loss); --color-amber: var(--amber); --color-amber-bg: var(--amber-bg);
+  --color-amber-ink: var(--amber-ink); --color-bench: var(--bench); --color-bar: var(--bar); --color-bar2: var(--bar2);
+  --color-logo: var(--logo); --color-chart: var(--chart); --color-scrim: var(--scrim);
+  /* Aliases used by the v2 screens (Activity, Deposit sheet). */
+  --color-surface: var(--card); --color-muted: var(--mute); --color-hover: var(--well); --color-accent-fg: var(--accent-ink);
+  --radius-card: var(--radius-card);
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+html { color-scheme: light; }
+html[data-theme="dark"] { color-scheme: dark; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; -webkit-font-smoothing: antialiased;
+}
+/* DSN-10: visible 3px focus ring, accent at 45% alpha. */
+:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 2px; border-radius: 8px; }
+input:focus-visible, select:focus-visible { outline-offset: 0; }
+
+.num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+.cents { font-size: 0.5em; vertical-align: 0.85em; color: var(--mute); font-weight: 600; margin-left: 0.04em; }
+.dotgrid { background-image: radial-gradient(var(--line) 1.2px, transparent 1.2px); background-size: 16px 16px; }
+.title { font-weight: 600; letter-spacing: -0.04em; line-height: 1.05; }
+
+.skeleton { background: linear-gradient(90deg, var(--line), var(--well), var(--line)); background-size: 200% 100%; animation: sk 1.4s linear infinite; border-radius: 8px; }
+@keyframes sk { to { background-position: -200% 0; } }
+@keyframes slide-in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes slide-up { from { transform: translateY(32px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes chart-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.sheet { animation: slide-up .18s ease-out; }
+@media (min-width: 768px) { .sheet { animation-name: slide-in; } }
+.chart-in { animation: chart-in 0.35s ease-out; }
+/* DSN-08: 150ms hover lift on rows. */
+.lift { transition: transform 150ms ease, background-color 150ms ease; }
+.lift:hover { transform: translateY(-1px); background: var(--bg); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .lift:hover { transform: none; }
+}

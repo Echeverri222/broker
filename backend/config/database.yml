@@ -1,0 +1,48 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  host: <%= ENV.fetch("DATABASE_HOST", "localhost") %>
+  username: <%= ENV.fetch("DATABASE_USER", "postgres") %>
+  password: <%= ENV.fetch("DATABASE_PASSWORD", "postgres") %>
+  max_connections: <%= ENV.fetch("RAILS_MAX_THREADS", 5).to_i + 5 %>
+
+# Primary, cache (Solid Cache) and queue (Solid Queue) are separate databases
+# on the same Postgres server, in every environment.
+development: &dev
+  primary:
+    <<: *default
+    database: paper_broker_development
+  cache:
+    <<: *default
+    database: paper_broker_development_cache
+    migrations_paths: db/cache_migrate
+  queue:
+    <<: *default
+    database: paper_broker_development_queue
+    migrations_paths: db/queue_migrate
+
+test:
+  primary:
+    <<: *default
+    database: paper_broker_test
+  cache:
+    <<: *default
+    database: paper_broker_test_cache
+    migrations_paths: db/cache_migrate
+  queue:
+    <<: *default
+    database: paper_broker_test_queue
+    migrations_paths: db/queue_migrate
+
+production:
+  primary:
+    <<: *default
+    database: paper_broker_production
+  cache:
+    <<: *default
+    database: paper_broker_production_cache
+    migrations_paths: db/cache_migrate
+  queue:
+    <<: *default
+    database: paper_broker_production_queue
+    migrations_paths: db/queue_migrate

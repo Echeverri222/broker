@@ -1,0 +1,16 @@
+#!/usr/bin/env ruby
+# Rule traceability gate (PRD §9.7): every rule ID in PRD.md must be cited by at least one test.
+root = File.expand_path("..", __dir__)
+ids = File.read(File.join(root, "PRD.md")).scan(/^\| ((?:MON|AUTH|ORD|QUE|MKT|CAL|CA|DEP|PERF|WL|RST|API|UX)-\d{2}) \|/).flatten.uniq
+# v3 (docs/PRD-ui-v3.md) lists rules as bold bullets: "- **DSN-01 Tokens.**" or "- **HOME-01**".
+v3 = File.join(root, "docs", "PRD-ui-v3.md")
+ids += File.read(v3).scan(/^- \*\*((?:DSN|HOME|CHT|FLT|DAT|WEL|QA)-\d{2})\b/).flatten.uniq if File.exist?(v3)
+ids.uniq!
+files = Dir[File.join(root, "{backend/spec,frontend/src,frontend/e2e}/**/*.{rb,ts,tsx}")]
+corpus = files.map { |f| File.read(f) }.join("\n")
+missing = ids.reject { |id| corpus.match?(/\b#{Regexp.escape(id)}\b/) }
+puts "#{ids.size - missing.size}/#{ids.size} rule IDs are cited by a test"
+unless missing.empty?
+  warn "Not covered: #{missing.join(', ')}"
+  exit 1
+end

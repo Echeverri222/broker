@@ -1,0 +1,1279 @@
+---
+openapi: 3.0.3
+info:
+  title: Paper Broker API
+  version: 3.0.0
+  description: Contract for PRD v2 and v3 (UI redesign data). Decimals are strings with a fixed scale.
+servers:
+- url: "/api/v1"
+paths:
+  "/signup":
+    post:
+      summary: Sign up
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/User"
+        default:
+          "$ref": "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+  "/session":
+    post:
+      summary: Sign in
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/User"
+        default:
+          "$ref": "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+    delete:
+      summary: Sign out
+      responses:
+        '204':
+          description: No content
+        default:
+          "$ref": "#/components/responses/Error"
+  "/me":
+    get:
+      summary: Current user
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/User"
+        default:
+          "$ref": "#/components/responses/Error"
+  "/market/status":
+    get:
+      summary: US market status
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/MarketStatus"
+        default:
+          "$ref": "#/components/responses/Error"
+  "/market/overview":
+    get:
+      summary: Market strip (S&P 500, Nasdaq, Bitcoin) from cached quotes
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        symbol:
+                          type: string
+                        label:
+                          type: string
+                        price:
+                          type: string
+                          pattern: "^-?\\d+\\.\\d+$"
+                        change_percent:
+                          type: string
+                          nullable: true
+                        proxy_for:
+                          type: string
+                          nullable: true
+                      additionalProperties: false
+                      required:
+                      - symbol
+                      - label
+                      - price
+                      - change_percent
+                      - proxy_for
+                additionalProperties: false
+                required:
+                - items
+        default:
+          "$ref": "#/components/responses/Error"
+  "/assets":
+    get:
+      summary: Search, filter and sort assets (cache only, never calls a provider)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  assets:
+                    type: array
+                    items:
+                      "$ref": "#/components/schemas/AssetListItem"
+                  meta:
+                    "$ref": "#/components/schemas/AssetListMeta"
+                additionalProperties: false
+                required:
+                - assets
+                - meta
+        default:
+          "$ref": "#/components/responses/Error"
+      parameters:
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: kind
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - stock
+          - etf
+          - crypto
+      - name: filter
+        in: query
+        required: false
+        description: Comma list of watching, owned, gainers, losers, most_traded, near_high, under_50, open (all must match).
+        schema:
+          type: string
+      - name: sector
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - change
+          - price_asc
+          - price_desc
+          - name
+          - volume
+          - change_1m
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        description: Page size, 1 to 50 (default 25).
+        schema:
+          type: string
+  "/assets/{symbol}":
+    get:
+      summary: Asset detail
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AssetDetail"
+        default:
+          "$ref": "#/components/responses/Error"
+      parameters:
+      - name: symbol
+        in: path
+        required: true
+        schema:
+          type: string
+  "/assets/{symbol}/candles":
+    get:
+      summary: Price history
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  symbol:
+                    type: string
+                  range:
+                    type: string
+                  interval:
+                    type: string
+                    enum:
+                    - 5m
+                    - 1h
+                    - 1d
+                    - 1w
+                  candles:
+                    type: array
+                    items:
+                      "$ref": "#/components/schemas/Candle"
+                additionalProperties: false
+                required:
+                - symbol
+                - range
+                - interval
+                - candles
+        default:
+          "$ref": "#/components/responses/Error"
+      parameters:
+      - name: symbol
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: range
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - 1D
+          - 1W
+          - 1M
+          - 3M
+          - 6M
+          - 1Y
+          - 5Y
+          - ALL
+      - name: interval
+        in: query
+        required: false
+        description: Candle size. Valid per range 1D:1h, 1W:1h|1d, 1M:1d, 3M|6M|1Y|5Y:1d|1w, ALL:1w; anything else is 422.
+        schema:
+          type: string
+          enum:
+          - 1h
+          - 1d
+          - 1w
+  "/portfolio":
+    get:
+      summary: Portfolio
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Portfolio"
+        default:
+          "$ref": "#/components/responses/Error"
+  "/portfolio/history":
+    get:
+      summary: Value history
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/History"
+        default:
+          "$ref": "#/components/responses/Error"
+      parameters:
+      - name: range
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: benchmark
+        in: query
+        required: false
+        schema:
+          type: string
+  "/orders":
+    get:
+      summary: Order history
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orders:
+                    type: array
+                    items:
+                      "$ref": "#/components/schemas/Order"
+                  page:
+                    type: integer
+                  per_page:
+                    type: integer
+                  total:
+                    type: integer
+                additionalProperties: false
+                required:
+                - orders
+                - page
+                - per_page
+                - total
+        default:
+          "$ref": "#/components/responses/Error"
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: side
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: symbol
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - pending
+          - filled
+          - cancelled
+          - rejected
+      - name: limit
+        in: query
+        required: false
+        description: Page size, 1 to 200 (default 25).
+        schema:
+          type: string
+    post:
+      summary: Place a market order
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/OrderResponse"
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/OrderResponse"
+        default:
+          "$ref": "#/components/responses/Error"
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 255
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+  "/deposits":
+    get:
+      summary: Deposit ledger
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deposits:
+                    type: array
+                    items:
+                      "$ref": "#/components/schemas/Deposit"
+                additionalProperties: false
+                required:
+                - deposits
+        default:
+          "$ref": "#/components/responses/Error"
+    post:
+      summary: Deposit virtual cash
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/DepositResponse"
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/DepositResponse"
+        default:
+          "$ref": "#/components/responses/Error"
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 255
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+  "/watchlist":
+    get:
+      summary: Watchlist
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  assets:
+                    type: array
+                    items:
+                      "$ref": "#/components/schemas/Asset"
+                additionalProperties: false
+                required:
+                - assets
+        default:
+          "$ref": "#/components/responses/Error"
+    post:
+      summary: Add to watchlist
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Asset"
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Asset"
+        default:
+          "$ref": "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+  "/watchlist/{symbol}":
+    delete:
+      summary: Remove from watchlist
+      parameters:
+      - name: symbol
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: No content
+        default:
+          "$ref": "#/components/responses/Error"
+  "/orders/{id}":
+    delete:
+      summary: Cancel a waiting order
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order:
+                    "$ref": "#/components/schemas/Order"
+                  cash:
+                    type: string
+                    pattern: "^-?\\d+\\.\\d+$"
+                  reserved_cash:
+                    type: string
+                    pattern: "^-?\\d+\\.\\d+$"
+                additionalProperties: false
+                required:
+                - order
+                - cash
+                - reserved_cash
+        default:
+          "$ref": "#/components/responses/Error"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+  "/account/reset":
+    post:
+      summary: Reset account
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/User"
+        default:
+          "$ref": "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+              - unauthenticated
+              - not_found
+              - validation_failed
+              - insufficient_funds
+              - insufficient_quantity
+              - order_not_pending
+              - too_many_pending_orders
+              - below_minimum
+              - market_closed
+              - idempotency_conflict
+              - idempotency_key_required
+              - unsupported_media_type
+              - rate_limited
+              - price_unavailable
+              - internal
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+          additionalProperties: false
+          required:
+          - code
+          - message
+      additionalProperties: false
+      required:
+      - error
+    Quote:
+      type: object
+      properties:
+        price:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        previous_close:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+          nullable: true
+        change:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        change_percent:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        as_of:
+          type: string
+          format: date-time
+        fetched_at:
+          type: string
+          format: date-time
+        stale:
+          type: boolean
+      additionalProperties: false
+      required:
+      - price
+      - previous_close
+      - change
+      - change_percent
+      - as_of
+      - fetched_at
+      - stale
+    Asset:
+      type: object
+      properties:
+        symbol:
+          type: string
+        name:
+          type: string
+        kind:
+          type: string
+          enum:
+          - stock
+          - etf
+          - crypto
+        sector:
+          type: string
+          nullable: true
+        logo_url:
+          type: string
+          nullable: true
+        quote:
+          allOf:
+          - "$ref": "#/components/schemas/Quote"
+          nullable: true
+      additionalProperties: false
+      required:
+      - symbol
+      - name
+      - kind
+      - sector
+      - logo_url
+      - quote
+    AssetListItem:
+      type: object
+      properties:
+        symbol:
+          type: string
+        name:
+          type: string
+        kind:
+          type: string
+          enum:
+          - stock
+          - etf
+          - crypto
+        sector:
+          type: string
+          nullable: true
+        logo_url:
+          type: string
+          nullable: true
+        quote:
+          allOf:
+          - "$ref": "#/components/schemas/Quote"
+          nullable: true
+        watched:
+          type: boolean
+        change_percent:
+          type: string
+          nullable: true
+        week52_position:
+          type: string
+          pattern: "^[01]\\.\\d{4}$"
+          nullable: true
+        spark:
+          type: array
+          items:
+            type: string
+          nullable: true
+        volume:
+          type: string
+          pattern: "^\\d+$"
+          nullable: true
+      additionalProperties: false
+      required:
+      - symbol
+      - name
+      - kind
+      - sector
+      - logo_url
+      - quote
+      - watched
+      - change_percent
+      - week52_position
+      - spark
+      - volume
+    AssetListMeta:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        fuzzy:
+          type: boolean
+        counts:
+          type: object
+          properties:
+            all:
+              type: integer
+            stock:
+              type: integer
+            etf:
+              type: integer
+            crypto:
+              type: integer
+            watching:
+              type: integer
+            owned:
+              type: integer
+          additionalProperties: false
+          required:
+          - all
+          - stock
+          - etf
+          - crypto
+          - watching
+          - owned
+        sectors:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
+      required:
+      - total
+      - page
+      - limit
+      - fuzzy
+      - counts
+      - sectors
+    AssetStats:
+      type: object
+      properties:
+        open:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+          nullable: true
+        day_low:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+          nullable: true
+        day_high:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+          nullable: true
+        week52_low:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+          nullable: true
+        week52_high:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+          nullable: true
+        volume:
+          type: string
+          pattern: "^\\d+$"
+          nullable: true
+        avg_volume:
+          type: string
+          pattern: "^\\d+$"
+          nullable: true
+        change_1m_percent:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+          nullable: true
+        change_1y_percent:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+          nullable: true
+      additionalProperties: false
+      required:
+      - open
+      - day_low
+      - day_high
+      - week52_low
+      - week52_high
+      - volume
+      - avg_volume
+      - change_1m_percent
+      - change_1y_percent
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        account:
+          type: object
+          properties:
+            cash:
+              type: string
+              pattern: "^-?\\d+\\.\\d+$"
+            reserved_cash:
+              type: string
+              pattern: "^-?\\d+\\.\\d+$"
+            net_deposits:
+              type: string
+              pattern: "^-?\\d+\\.\\d+$"
+          additionalProperties: false
+          required:
+          - cash
+          - reserved_cash
+          - net_deposits
+      additionalProperties: false
+      required:
+      - id
+      - name
+      - email
+      - account
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        symbol:
+          type: string
+        name:
+          type: string
+        kind:
+          type: string
+        side:
+          type: string
+          enum:
+          - buy
+          - sell
+        quantity:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+          nullable: true
+        price:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+          nullable: true
+        total:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+          nullable: true
+        realized_pnl:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+          nullable: true
+        status:
+          type: string
+          enum:
+          - pending
+          - filled
+          - cancelled
+          - rejected
+        filled_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        amount:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+          nullable: true
+        requested_quantity:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+          nullable: true
+        sell_all:
+          type: boolean
+        reserved_cash:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        reject_reason:
+          type: string
+          nullable: true
+      additionalProperties: false
+      required:
+      - id
+      - symbol
+      - name
+      - kind
+      - side
+      - quantity
+      - price
+      - total
+      - realized_pnl
+      - status
+      - filled_at
+      - created_at
+      - amount
+      - requested_quantity
+      - sell_all
+      - reserved_cash
+      - reject_reason
+    PositionSummary:
+      type: object
+      properties:
+        symbol:
+          type: string
+        quantity:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        average_cost:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+      additionalProperties: false
+      required:
+      - symbol
+      - quantity
+      - average_cost
+    OrderResponse:
+      type: object
+      properties:
+        order:
+          "$ref": "#/components/schemas/Order"
+        cash:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        reserved_cash:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        position:
+          allOf:
+          - "$ref": "#/components/schemas/PositionSummary"
+          nullable: true
+      additionalProperties: false
+      required:
+      - order
+      - cash
+      - reserved_cash
+      - position
+    Deposit:
+      type: object
+      properties:
+        id:
+          type: integer
+        amount:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        kind:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      additionalProperties: false
+      required:
+      - id
+      - amount
+      - kind
+      - created_at
+    DepositResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        amount:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        kind:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        cash:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+      additionalProperties: false
+      required:
+      - id
+      - amount
+      - kind
+      - created_at
+      - cash
+    Position:
+      type: object
+      properties:
+        symbol:
+          type: string
+        name:
+          type: string
+        kind:
+          type: string
+        quantity:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        average_cost:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        price:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+          nullable: true
+        price_status:
+          type: string
+          enum:
+          - ok
+          - missing
+        market_value:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+          nullable: true
+        unrealized_pnl:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+          nullable: true
+        unrealized_pnl_percent:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+          nullable: true
+        day_change_percent:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        quote_as_of:
+          type: string
+          format: date-time
+          nullable: true
+      additionalProperties: false
+      required:
+      - symbol
+      - name
+      - kind
+      - quantity
+      - average_cost
+      - price
+      - price_status
+      - market_value
+      - unrealized_pnl
+      - unrealized_pnl_percent
+      - day_change_percent
+      - quote_as_of
+    Portfolio:
+      type: object
+      properties:
+        cash:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        reserved_cash:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        net_deposits:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        total_value:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        invested_value:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        day_change:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        day_change_percent:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        total_return:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        total_return_percent:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        incomplete:
+          type: boolean
+        positions:
+          type: array
+          items:
+            "$ref": "#/components/schemas/Position"
+      additionalProperties: false
+      required:
+      - cash
+      - reserved_cash
+      - net_deposits
+      - total_value
+      - invested_value
+      - day_change
+      - day_change_percent
+      - total_return
+      - total_return_percent
+      - incomplete
+      - positions
+    SeriesPoint:
+      type: object
+      properties:
+        time:
+          type: string
+          format: date-time
+        value:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+      additionalProperties: false
+      required:
+      - time
+      - value
+    History:
+      type: object
+      properties:
+        range:
+          type: string
+        series:
+          type: array
+          items:
+            "$ref": "#/components/schemas/SeriesPoint"
+        deposits_in_range:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        return:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        return_percent:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        incomplete:
+          type: boolean
+        benchmark:
+          type: object
+          properties:
+            symbol:
+              type: string
+            series:
+              type: array
+              items:
+                "$ref": "#/components/schemas/SeriesPoint"
+          additionalProperties: false
+          required:
+          - symbol
+          - series
+          nullable: true
+        benchmark_error:
+          type: string
+      additionalProperties: false
+      required:
+      - range
+      - series
+      - deposits_in_range
+      - return
+      - return_percent
+      - incomplete
+    MarketStatus:
+      type: object
+      properties:
+        open:
+          type: boolean
+        next_open:
+          type: string
+          format: date-time
+          nullable: true
+        next_close:
+          type: string
+          format: date-time
+          nullable: true
+        session:
+          type: string
+          enum:
+          - regular
+          - closed
+        early_close:
+          type: boolean
+      additionalProperties: false
+      required:
+      - open
+      - next_open
+      - next_close
+      - session
+      - early_close
+    AssetDetail:
+      type: object
+      properties:
+        symbol:
+          type: string
+        name:
+          type: string
+        kind:
+          type: string
+        sector:
+          type: string
+          nullable: true
+        logo_url:
+          type: string
+          nullable: true
+        quote:
+          allOf:
+          - "$ref": "#/components/schemas/Quote"
+          nullable: true
+        watched:
+          type: boolean
+        stats:
+          "$ref": "#/components/schemas/AssetStats"
+        position:
+          type: object
+          properties:
+            quantity:
+              type: string
+              pattern: "^-?\\d+\\.\\d+$"
+            average_cost:
+              type: string
+              pattern: "^-?\\d+\\.\\d+$"
+            market_value:
+              type: string
+              pattern: "^-?\\d+\\.\\d+$"
+              nullable: true
+          additionalProperties: false
+          required:
+          - quantity
+          - average_cost
+          - market_value
+          nullable: true
+      additionalProperties: false
+      required:
+      - symbol
+      - name
+      - kind
+      - logo_url
+      - sector
+      - quote
+      - watched
+      - stats
+      - position
+    Candle:
+      type: object
+      properties:
+        time:
+          type: integer
+        open:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        high:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        low:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        close:
+          type: string
+          pattern: "^-?\\d+\\.\\d+$"
+        volume:
+          type: string
+          pattern: "^\\d+$"
+          nullable: true
+      additionalProperties: false
+      required:
+      - time
+      - open
+      - high
+      - low
+      - close
+      - volume
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema:
+            "$ref": "#/components/schemas/Error"
