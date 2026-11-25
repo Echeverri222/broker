@@ -5,6 +5,9 @@ class ApplicationController < ActionController::API
 
   before_action :require_json!
 
+  # SEC-02: a general per-user limit (per IP when anonymous). Endpoint-specific limits are declared in each controller.
+  rate_limit to: 600, within: 1.minute, name: "general", by: -> { limit_key }, with: -> { rate_limited!(60) }
+
   # Declared first so every more specific handler below takes precedence (Rails checks last-declared first).
   rescue_from StandardError do |e|
     Rails.logger.error("#{e.class}: #{e.message}\n#{e.backtrace&.first(10)&.join("\n")}")
@@ -48,9 +51,17 @@ class ApplicationController < ActionController::API
     allowed.include?(origin)
   end
 
-  def rate_limited!
+  def rate_limited!(retry_after = 60)
+    response.set_header("Retry-After", retry_after.to_i.to_s)
     render json: { error: { code: "rate_limited", message: "Too many attempts. Please wait a few minutes and try again." } },
            status: :too_many_requests
+  end
+
+  # Signed-in users are limited per user, everyone else per client IP (SEC-01 makes that the real client).
+  def limit_key = current_user ? "user:#{current_user.id}" : "ip:#{request.remote_ip}"
+
+  def audit(event, user: current_user, **meta)
+    AuditEvent.record(event, user: user, ip: request.remote_ip, user_agent: request.user_agent, **meta)
   end
 
   def render_error(code, message)
@@ -60,20 +71,27 @@ class ApplicationController < ActionController::API
 
   def current_session
     return @current_session if defined?(@current_session)
-    token = cookies.signed[COOKIE]
-    @current_session = token && Session.includes(user: :account).find_by(token: token)
+    found = Session.includes(user: :account).find_by_token(cookies.signed[COOKIE])
+    if found&.expired? # SES-02
+      found.destroy
+      found = nil
+    end
+    found&.touch_seen!
+    @current_session = found
   end
 
   def current_user = current_session&.user
   def current_account = current_user&.account
 
   def authenticate!
-    raise ApiError.new(:unauthenticated, "Please sign in to continue.") unless current_user
+    raise ApiError.new(:unauthenticated, "Please sign in to continue.") unless current_user && !current_user.deleted?
+    raise ApiError.new(:account_disabled, "This account has been disabled. Contact support.") if current_user.disabled? # ADM-02
   end
 
   def start_session!(user)
     session = user.sessions.create!(user_agent: request.user_agent&.first(255), ip_address: request.remote_ip)
-    cookies.signed[COOKIE] = { value: session.token, httponly: true, same_site: :lax,
-                               expires: 30.days.from_now, secure: Rails.env.production? }
+    cookies.signed[COOKIE] = { value: session.raw_token, httponly: true, same_site: :lax,
+                               expires: Session::ABSOLUTE_LIFETIME.from_now, secure: Rails.env.production? }
+    session
   end
 end

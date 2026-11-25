@@ -4,7 +4,6 @@ module Api
       before_action :authenticate!
 
       def show
-        Orders::FillPending.call(account: current_account)
         render json: Presenters.portfolio(current_account, Portfolios::Valuate.call(current_account))
       end
 

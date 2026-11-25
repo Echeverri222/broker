@@ -15,6 +15,22 @@ module Snapshots
       end
     end
 
+    # JOB-03: same eligibility rules, but one job per account. Returns the number of jobs enqueued.
+    def self.enqueue(kind:)
+      now = Clock.now
+      market_open = MarketCalendar.open?(now)
+      return 0 if kind == :close && !MarketCalendar.trading_day?(now.in_time_zone(MarketCalendar::ZONE).to_date)
+      count = 0
+      Account.includes(positions: :asset).find_in_batches(batch_size: 200) do |batch|
+        batch.each do |account|
+          next if kind == :hourly && !relevant?(account, market_open)
+          SnapshotAccountJob.perform_later(account.id, now.utc.iso8601(6), kind.to_s)
+          count += 1
+        end
+      end
+      count
+    end
+
     def self.relevant?(account, market_open)
       account.positions.any? { |p| p.asset.crypto? || market_open }
     end

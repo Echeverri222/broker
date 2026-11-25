@@ -58,7 +58,7 @@ module MarketData
     def candles(asset, range:, interval: nil)
       interval ||= DEFAULT_INTERVALS.fetch(range)
       ttl = %w[1D 1W].include?(range) ? 5.minutes : 1.hour
-      Rails.cache.fetch("candles/v3/#{asset.symbol}/#{range}/#{interval}", expires_in: ttl) do
+      SingleFlight.fetch("candles/v3/#{asset.symbol}/#{range}/#{interval}", expires_in: ttl) do
         yahoo.candles(asset, range: range, interval: interval).map(&:to_h)
       end.map { |h| Candle.new(**h.symbolize_keys) }
     end
@@ -66,7 +66,7 @@ module MarketData
     # Close series [[unix_time, BigDecimal]] from `from` to now, for benchmark maths.
     def history(asset, from:)
       day = from.to_date
-      Rails.cache.fetch("history/v1/#{asset.symbol}/#{day}", expires_in: 10.minutes) do
+      SingleFlight.fetch("history/v1/#{asset.symbol}/#{day}", expires_in: 10.minutes) do
         yahoo.history(asset, from: day.in_time_zone("UTC") - 7.days).map { |t, c| [ t, c.to_s ] }
       end.map { |t, c| [ t, BigDecimal(c) ] }
     end

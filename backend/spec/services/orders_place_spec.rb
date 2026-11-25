@@ -157,11 +157,18 @@ RSpec.describe Orders::Place do
   end
 
   describe "price and hours" do
-    it "refetches a stale quote before filling [ORD-10]" do
-      asset = with_asset(price: "100", fetched_at: Clock.now - 5.minutes)
-      q = MarketData::Quote.new(price: BigDecimal("101"), previous_close: BigDecimal("100"), change: 1, change_percent: 1, as_of: Clock.now)
-      expect(MarketData).to receive(:quote).with(asset).and_return(q)
-      expect(place(amount: "101").order.price).to eq(101)
+    it "never calls a provider: a stale stored quote fails and asks for one refresh [ORD-10, MKD-03]" do
+      with_asset(price: "100", fetched_at: Clock.now - 5.minutes)
+      expect(MarketData).not_to receive(:quote)
+      expect(MarketData).not_to receive(:quotes)
+      expect { err(:price_unavailable) { place(amount: "101") } }.to have_enqueued_job(RefreshAssetJob).once
+      expect(account.reload.cash).to eq(100_000)
+    end
+
+    it "fills at the stored quote when it was fetched within 3 minutes [ORD-10, MKD-03]" do
+      with_asset(price: "100", fetched_at: Clock.now - 2.minutes)
+      expect(MarketData).not_to receive(:quote)
+      expect(place(amount: "100").order.price).to eq(100)
     end
 
     it "rejects a quote whose as_of is too old even if fetched recently [ORD-11]" do
@@ -176,7 +183,7 @@ RSpec.describe Orders::Place do
       err(:price_unavailable) { place(symbol: "BTC", amount: "10") }
     end
 
-    it "maps provider failures to price_unavailable [ORD-12]" do
+    it "a provider outage never reaches the order: price_unavailable, cash untouched [ORD-12]" do
       with_asset(fetched_at: Clock.now - 5.minutes)
       allow(MarketData).to receive(:quote).and_raise(MarketData::ProviderError, "boom")
       err(:price_unavailable) { place(amount: "10") }
@@ -193,7 +200,8 @@ RSpec.describe Orders::Place do
 
     it "refuses when the market is closed and no next session is known [ORD-13]" do
       with_asset
-      Clock.override = -> { Time.utc(2028, 1, 3, 16, 0, 0) } # past COVERED_THROUGH
+      past = MarketCalendar::COVERED_THROUGH + 30 # past the end of the table
+      Clock.override = -> { Time.utc(past.year, past.month, past.day, 16, 0, 0) }
       expect { place(amount: "10") }.to raise_error(ApiError) { |e|
         expect(e.code).to eq(:market_closed)
         expect(e.details[:next_open]).to be_nil

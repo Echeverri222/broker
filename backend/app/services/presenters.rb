@@ -46,7 +46,8 @@ module Presenters
   end
 
   def user(u)
-    { id: u.id, name: u.name, email: u.email,
+    { id: u.id, name: u.name, email: u.email, verified: u.verified?, admin: u.admin,
+      preferences: { notify_order_filled: u.notify_order_filled, notify_order_rejected: u.notify_order_rejected },
       account: { cash: Fmt.money(u.account.cash), reserved_cash: Fmt.money(u.account.reserved_cash), net_deposits: Fmt.money(u.account.net_deposits) } }
   end
 

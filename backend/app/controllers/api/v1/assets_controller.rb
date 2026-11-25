@@ -2,6 +2,7 @@ module Api
   module V1
     class AssetsController < ApplicationController
       before_action :authenticate!
+      rate_limit to: 120, within: 1.minute, only: %i[index candles], by: -> { limit_key }, name: "search", with: -> { rate_limited!(60) } # SEC-02
 
       FILTERS = %w[watching owned gainers losers most_traded near_high under_50 open].freeze
       SORTS = %w[change price_asc price_desc name volume change_1m].freeze
@@ -49,7 +50,7 @@ module Api
       def show
         asset = Asset.active.includes(:quote).find_by!(symbol: params[:symbol].upcase)
         Quotes::Refresh.touch_view(asset)
-        Quotes::Refresh.refresh_one(asset)
+        Quotes::Refresh.request_refresh(asset)
         pos = current_account.positions.find_by(asset: asset)
         render json: Presenters.asset(asset,
           watched: current_user.watchlist_items.exists?(asset: asset),

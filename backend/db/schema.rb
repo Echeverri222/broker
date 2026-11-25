@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_25_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_26_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -37,6 +37,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_000001) do
     t.string "sector"
     t.index ["symbol"], name: "index_assets_on_symbol", unique: true
     t.check_constraint "kind::text = ANY (ARRAY['stock'::character varying::text, 'etf'::character varying::text, 'crypto'::character varying::text])", name: "assets_kind_valid"
+  end
+
+  create_table "audit_events", force: :cascade do |t|
+    t.bigint "user_id"
+    t.string "event", null: false
+    t.string "ip_address"
+    t.string "user_agent"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["created_at"], name: "index_audit_events_on_created_at"
+    t.index ["event", "created_at"], name: "index_audit_events_on_event_and_created_at"
+    t.index ["user_id"], name: "index_audit_events_on_user_id"
   end
 
   create_table "corporate_actions", force: :cascade do |t|
@@ -87,6 +99,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_000001) do
     t.datetime "cancelled_at"
     t.index ["account_id", "created_at"], name: "index_orders_on_account_id_and_created_at"
     t.index ["account_id", "idempotency_key"], name: "index_orders_on_account_id_and_idempotency_key", unique: true, where: "(idempotency_key IS NOT NULL)"
+    t.index ["account_id", "status"], name: "index_orders_on_account_id_and_status"
     t.index ["account_id"], name: "index_orders_on_account_id"
     t.index ["asset_id"], name: "index_orders_on_asset_id"
     t.index ["status", "created_at"], name: "index_orders_pending", where: "((status)::text = 'pending'::text)"
@@ -95,7 +108,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_000001) do
     t.check_constraint "reserved_cash >= 0::numeric", name: "orders_reserved_nonneg"
     t.check_constraint "side::text = ANY (ARRAY['buy'::character varying::text, 'sell'::character varying::text])", name: "orders_side_valid"
     t.check_constraint "status::text <> 'filled'::text OR quantity IS NOT NULL AND price IS NOT NULL AND total IS NOT NULL", name: "orders_filled_complete"
-    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying::text, 'filled'::character varying::text, 'cancelled'::character varying::text, 'rejected'::character varying::text])", name: "orders_status_valid"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'filled'::character varying, 'cancelled'::character varying, 'rejected'::character varying]::text[])", name: "orders_status_valid"
     t.check_constraint "total > 0::numeric", name: "orders_total_pos"
   end
 
@@ -155,13 +168,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_000001) do
 
   create_table "sessions", force: :cascade do |t|
     t.bigint "user_id", null: false
-    t.string "token", null: false
+    t.string "token"
     t.string "user_agent"
     t.string "ip_address"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["token"], name: "index_sessions_on_token", unique: true
+    t.string "token_digest", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "last_seen_at", null: false
+    t.datetime "reauthenticated_at"
+    t.index ["expires_at"], name: "index_sessions_on_expires_at"
+    t.index ["token_digest"], name: "index_sessions_on_token_digest", unique: true
+    t.index ["user_id", "last_seen_at"], name: "index_sessions_on_user_id_and_last_seen_at"
     t.index ["user_id"], name: "index_sessions_on_user_id"
+  end
+
+  create_table "settings", force: :cascade do |t|
+    t.string "key", null: false
+    t.string "value"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_settings_on_key", unique: true
   end
 
   create_table "users", force: :cascade do |t|
@@ -170,6 +197,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_000001) do
     t.string "name", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "verified_at"
+    t.datetime "deleted_at"
+    t.datetime "disabled_at"
+    t.boolean "admin", default: false, null: false
+    t.boolean "notify_order_filled", default: false, null: false
+    t.boolean "notify_order_rejected", default: true, null: false
     t.index ["email"], name: "index_users_on_email", unique: true
   end
 

@@ -1,11 +1,20 @@
-# Recurring tasks (Solid Queue). Both jobs are idempotent.
+# Recurring tasks (Solid Queue). All jobs are idempotent (JOB-04).
 default: &default
   refresh_quotes:
     class: RefreshQuotesJob
     schedule: every minute
   fill_pending_orders:
     class: FillPendingOrdersJob
-    schedule: every minute
+    schedule: every 15 seconds
+  pre_open_refresh:
+    class: PreOpenRefreshJob
+    schedule: every weekday at 9:29am America/New_York
+  ledger_verify:
+    class: LedgerVerifyJob
+    schedule: every hour at minute 41
+  prune_sessions:
+    class: PruneSessionsJob
+    schedule: every day at 3:15am
   warm_market_data:
     class: WarmMarketDataJob
     schedule: every hour at minute 7

@@ -11,6 +11,8 @@ require "action_controller/railtie"
 # require "action_mailbox/engine"
 # require "action_text/engine"
 require "action_view/railtie"
+require "action_mailer/railtie"
+require_relative "deploy_config"
 # require "action_cable/engine"
 # require "rails/test_unit/railtie"
 
@@ -43,5 +45,19 @@ module Backend
     config.middleware.use ActionDispatch::Cookies
     config.autoload_lib(ignore: %w[assets tasks]) if config.respond_to?(:autoload_lib)
     config.time_zone = "UTC"
+
+    # SEC-01: behind a load balancer with a public address, trust its X-Forwarded-For so rate limits and the session
+    # IP use the real client. TRUSTED_PROXIES is a comma-separated list of CIDRs; private ranges are always trusted.
+    proxies = DeployConfig.trusted_proxies(ENV["TRUSTED_PROXIES"])
+    config.action_dispatch.trusted_proxies = proxies if proxies
+
+    # SEC-07: headers on every API response. The SPA's own CSP is set by the static host (deploy/nginx.conf).
+    config.action_dispatch.default_headers = {
+      "X-Content-Type-Options" => "nosniff",
+      "X-Frame-Options" => "DENY",
+      "Referrer-Policy" => "strict-origin-when-cross-origin",
+      "Permissions-Policy" => "camera=(), microphone=(), geolocation=()",
+      "Content-Security-Policy" => "default-src 'none'; frame-ancestors 'none'"
+    }
   end
 end

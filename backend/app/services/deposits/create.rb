@@ -3,6 +3,7 @@ module Deposits
   class Create
     MIN = BigDecimal("1")
     MAX = BigDecimal("10000000")
+    DAILY_MAX = BigDecimal("50000000") # SEC-04: per account per rolling 24 hours
     Result = Struct.new(:deposit, :created, keyword_init: true)
 
     # `kind: "initial"` is used internally for signup/reset (no key needed).
@@ -25,6 +26,9 @@ module Deposits
             raise ApiError.new(:idempotency_conflict, "This Idempotency-Key was already used with a different deposit.")
           end
           return Result.new(deposit: existing, created: false)
+        end
+        if account.deposits.where(kind: "deposit").where("created_at > ?", Clock.now - 24.hours).sum(:amount) + amt > DAILY_MAX
+          raise ApiError.new(:validation_failed, "Daily deposit limit of $#{DAILY_MAX.to_i} reached. Try again tomorrow.")
         end
         dep = account.deposits.create!(amount: amt, kind: kind, idempotency_key: key, request_hash: hash)
         account.update!(cash: account.cash + amt)

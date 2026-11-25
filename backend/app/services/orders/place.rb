@@ -4,6 +4,7 @@ module Orders
   class Place
     MIN_ORDER = BigDecimal("1")
     MAX_PENDING = 20
+    DAILY_ORDER_LIMIT = 500 # SEC-04: orders created per account per rolling 24 hours
     RESERVE_BUFFER = BigDecimal("1.05") # QUE-04: quantity-sized queued buys reserve 5% extra for a gap at the open
     STOCK_MAX_AGE = 15.minutes
     CRYPTO_MAX_AGE = 5.minutes
@@ -25,11 +26,15 @@ module Orders
     end
 
     def call
+      raise_if_paused!
       validate_input!
       asset = Asset.active.find_by(symbol: @symbol) or raise ApiError.new(:not_found, "Unknown asset #{@symbol}")
 
       if (existing = @account.orders.find_by(idempotency_key: @key))
         return replay(existing)
+      end
+      if @account.orders.where("created_at > ?", Clock.now - 24.hours).count >= DAILY_ORDER_LIMIT
+        raise ApiError.new(:validation_failed, "Daily limit of #{DAILY_ORDER_LIMIT} orders reached. Try again tomorrow.")
       end
 
       now = Clock.now
@@ -58,10 +63,12 @@ module Orders
     end
 
     def fill_pending!
+      return @pending unless Setting.trading_enabled? # ADM-05: waiting orders stay waiting while trading is paused
       asset = @pending.asset
       now = Clock.now
       return @pending if closed?(asset, now)
       quote = usable_quote!(asset, now)
+      settled = false
       Order.transaction do
         @account.lock!
         @pending.reload
@@ -72,11 +79,20 @@ module Orders
           raise if e.code == :price_unavailable
           @pending.update!(status: "rejected", reject_reason: e.message, reserved_cash: 0)
         end
+        settled = true
       end
       @pending.reload
+      OrderNotificationJob.perform_later(@pending.id) if settled # NTF-01: only the call that settled it notifies
+      @pending
     end
 
     private
+
+    # ADM-05: the kill switch blocks new orders only; cancelling and reading keep working.
+    def raise_if_paused!
+      return if Setting.trading_enabled?
+      raise ApiError.new(:trading_paused, "Trading is paused for maintenance. Your cash and positions are safe. Please try again soon.")
+    end
 
     def enqueue(asset, now)
       Order.transaction do
@@ -182,21 +198,20 @@ module Orders
       true
     end
 
-    # ORD-10/11/12: refetch outside the lock when fetched_at is stale; then require a current as_of.
+    # MKD-03 (ORD-10/11/12): orders use the STORED quote only. If it is older than FETCH_MAX_AGE (the refresh job is
+    # behind or the provider is down) or its as_of is too old, the order fails with price_unavailable and ONE
+    # background refresh is requested. A request never calls a provider.
+    FETCH_MAX_AGE = 3.minutes
+
     def usable_quote!(asset, now)
       quote = asset.quote
-      unless quote&.fresh?(now)
-        q = begin
-          MarketData.quote(asset)
-        rescue MarketData::ProviderError
-          raise unavailable(asset)
-        end
-        quote ||= Quote.new(asset: asset)
-        quote.update!(price: q.price, previous_close: q.previous_close, change_percent: q.change_percent,
-                      as_of: q.as_of, fetched_at: now)
-      end
       max_age = asset.crypto? ? CRYPTO_MAX_AGE : STOCK_MAX_AGE
-      raise unavailable(asset) if quote.price.nil? || !quote.price.positive? || quote.as_of < now - max_age
+      usable = quote&.price&.positive? && quote.as_of >= now - max_age && quote.fetched_at >= now - FETCH_MAX_AGE
+      unless usable
+        Quotes::Refresh.request_refresh(asset, max_age: 0)
+        raise unavailable(asset)
+      end
+      Quotes::Refresh.request_refresh(asset) # keep it warm, deduplicated
       quote
     end
 

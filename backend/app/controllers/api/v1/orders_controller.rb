@@ -2,6 +2,7 @@ module Api
   module V1
     class OrdersController < ApplicationController
       before_action :authenticate!
+      rate_limit to: 60, within: 1.minute, only: %i[create destroy], by: -> { limit_key }, name: "orders", with: -> { rate_limited!(60) } # SEC-02
       PER_PAGE = 25
       MAX_LIMIT = 200
 
@@ -17,7 +18,6 @@ module Api
         end
         per_page = Integer(params[:limit].presence || PER_PAGE, exception: false)
         raise ApiError.new(:validation_failed, "limit must be between 1 and #{MAX_LIMIT}") unless per_page && per_page.between?(1, MAX_LIMIT)
-        Orders::FillPending.call(account: current_account) # QUE-06: also settle lazily, so it works without a job worker
         scope = current_account.orders.includes(:asset).order(Arel.sql("COALESCE(filled_at, created_at) DESC"), id: :desc)
         scope = scope.where(side: params[:side]) if params[:side].present?
         scope = scope.where(status: params[:status]) if params[:status].present?

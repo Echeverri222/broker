@@ -21,6 +21,7 @@ Rails.application.configure do
   # Show full error reports.
   config.consider_all_requests_local = true
   config.cache_store = :memory_store
+  config.active_job.queue_adapter = :test # jobs are enqueued, not run, unless a spec performs them
 
   # Render exception templates for rescuable exceptions and raise for other exceptions.
   config.action_dispatch.show_exceptions = :rescuable
