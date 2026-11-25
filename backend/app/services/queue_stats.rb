@@ -3,9 +3,11 @@
 module QueueStats
   module_function
 
-  def available? = defined?(SolidQueue::ReadyExecution) && SolidQueue::ReadyExecution.table_exists?
+  def available?
+    defined?(SolidQueue::ReadyExecution) && SolidQueue::ReadyExecution.table_exists? ? true : false
   rescue StandardError
     false
+  end
 
   # Seconds the oldest ready job has been waiting, or nil when nothing waits.
   def oldest_ready_age

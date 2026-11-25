@@ -1303,6 +1303,8 @@ components:
           type: boolean
         admin:
           type: boolean
+        trading_enabled:
+          type: boolean
         preferences:
           type: object
           properties:

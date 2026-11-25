@@ -1,10 +1,10 @@
 module Api
   module V1
     class SessionsController < ApplicationController
-      rate_limit to: 10, within: 3.minutes, only: :create, by: -> { request.remote_ip }, with: -> { rate_limited!(180) }
+      rate_limit to: 10, within: 3.minutes, only: :create, by: -> { client_ip }, with: -> { rate_limited!(180) }
       # SEC-03: also limited per email, so rotating IPs does not help a password guesser.
       rate_limit to: 10, within: 15.minutes, only: :create, name: "email", with: -> { rate_limited!(900) },
-                 by: -> { params[:email].to_s.strip.downcase.presence || request.remote_ip }
+                 by: -> { params[:email].to_s.strip.downcase.presence || client_ip }
       DUMMY = BCrypt::Password.create("dummy-password-for-timing")
 
       def create

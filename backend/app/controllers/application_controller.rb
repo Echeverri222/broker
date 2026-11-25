@@ -58,10 +58,18 @@ class ApplicationController < ActionController::API
   end
 
   # Signed-in users are limited per user, everyone else per client IP (SEC-01 makes that the real client).
-  def limit_key = current_user ? "user:#{current_user.id}" : "ip:#{request.remote_ip}"
+  def limit_key = current_user ? "user:#{current_user.id}" : "ip:#{client_ip}"
+
+  # SEC-01: Rails' remote_ip believes X-Forwarded-For even when the direct peer is not a proxy, so a client could pick
+  # its own IP. Only honour the header when the connecting peer is a trusted proxy.
+  def client_ip
+    proxies = Rails.application.config.action_dispatch.trusted_proxies || ActionDispatch::RemoteIp::TRUSTED_PROXIES
+    peer = IPAddr.new(request.remote_addr.to_s) rescue nil
+    peer && proxies.any? { |p| p.include?(peer) } ? request.remote_ip : request.remote_addr
+  end
 
   def audit(event, user: current_user, **meta)
-    AuditEvent.record(event, user: user, ip: request.remote_ip, user_agent: request.user_agent, **meta)
+    AuditEvent.record(event, user: user, ip: client_ip, user_agent: request.user_agent, **meta)
   end
 
   def render_error(code, message)
@@ -89,7 +97,7 @@ class ApplicationController < ActionController::API
   end
 
   def start_session!(user)
-    session = user.sessions.create!(user_agent: request.user_agent&.first(255), ip_address: request.remote_ip)
+    session = user.sessions.create!(user_agent: request.user_agent&.first(255), ip_address: client_ip)
     cookies.signed[COOKIE] = { value: session.raw_token, httponly: true, same_site: :lax,
                                expires: Session::ABSOLUTE_LIFETIME.from_now, secure: Rails.env.production? }
     session

@@ -1,7 +1,7 @@
 module Api
   module V1
     class SignupsController < ApplicationController
-      rate_limit to: 5, within: 1.hour, only: :create, by: -> { request.remote_ip }, with: -> { rate_limited!(3600) }
+      rate_limit to: 5, within: 1.hour, only: :create, by: -> { client_ip }, with: -> { rate_limited!(3600) }
 
       # AUTH-01: user, account, initial deposit and first snapshot in one transaction.
       def create

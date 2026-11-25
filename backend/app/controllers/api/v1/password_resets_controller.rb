@@ -3,10 +3,10 @@ module Api
     # SES-05. `create` answers 202 with an empty body whether or not the email exists, and sends mail from a job, so the
     # response and its timing do not reveal which emails are registered.
     class PasswordResetsController < ApplicationController
-      rate_limit to: 5, within: 1.hour, only: :create, by: -> { request.remote_ip }, with: -> { rate_limited!(3600) }
+      rate_limit to: 5, within: 1.hour, only: :create, by: -> { client_ip }, with: -> { rate_limited!(3600) }
       rate_limit to: 3, within: 1.hour, only: :create, name: "email", with: -> { rate_limited!(3600) },
-                 by: -> { params[:email].to_s.strip.downcase.presence || request.remote_ip }
-      rate_limit to: 10, within: 1.hour, only: :update, by: -> { request.remote_ip }, name: "update", with: -> { rate_limited!(3600) }
+                 by: -> { params[:email].to_s.strip.downcase.presence || client_ip }
+      rate_limit to: 10, within: 1.hour, only: :update, by: -> { client_ip }, name: "update", with: -> { rate_limited!(3600) }
 
       def create
         user = User.find_by(email: params[:email].to_s.strip.downcase)
