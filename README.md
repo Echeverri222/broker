@@ -38,6 +38,22 @@ cd .. && ruby script/rule_coverage      # every rule ID (PRD.md and docs/PRD-ui-
 cd frontend && npm run check:api         # generated types must match backend/openapi.yml (also runs in CI)
 ```
 
+## Multi-user (docs/PRD-v4-multi-user.md)
+Per-device sessions (hashed, expiring, listable and revocable), password reset and email confirmation by signed token, change
+password, email preferences, data export and account deletion, rate limits, append-only audit log, admin API (15-minute
+re-authentication, asset toggle, kill switch), public `/api/v1/status`, `/up/deep` readiness and bearer-protected `/metrics`.
+Scale: the request path never calls a provider; jobs own provider traffic behind a circuit breaker, fan out per account on
+`critical`/`default`/`low` queues, and the SPA polls every 15 s while active and every 60 s when idle.
+Ops: `deploy/` (nginx, compose, smoke test, alert rules), `loadtest/`, `docs/runbook.md`. Every PRD rule ID must be cited
+by a test: `ruby script/rule_coverage`.
+
+### v4 deviations
+- Deferred (documented in `script/rule_coverage`): SCL-07 (snapshots still run inside the order transaction) and SES-09 (account reset still hard-deletes).
+- SCL-12: the `GET /home` summary endpoint is not built; only adaptive polling is.
+- CAL-06: no calendar table; NYSE holidays remain in code.
+- OBS-01: no error-tracker gem; errors go through `Rails.error`, so a subscriber can be added without code changes.
+- SEC-03: throttled requests answer 429 (the PRD text said otherwise).
+
 ## Deviations from the PRD
 - PRD v2 decisions D1-D8 were assumed from its recommendations. **D1 is reversed**: orders placed while the market is closed are queued (PRD §5.5, QUE-01..09) instead of rejected.
 - Orders rejected at validation time are returned as errors, not stored; a queued order that cannot fill at the open is stored as `rejected` with a reason.

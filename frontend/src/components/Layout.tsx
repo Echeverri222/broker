@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { DepositSheet } from "./DepositSheet";
 import { SymbolPicker } from "./SymbolPicker";
 import { HIT } from "./ui";
+import { Banners } from "./Banners";
 import { Money } from "./Money";
 import { api } from "../lib/api";
 import { useMe, usePortfolio } from "../lib/query";
@@ -100,6 +101,7 @@ export function Layout() {
           </div>
         </div>
       </header>
+      <Banners />
       <main id="main" className="mx-auto max-w-[1200px] px-4 py-6 md:px-8 md:py-8"><Outlet /></main>
       {depositing && <DepositSheet onClose={() => setDepositing(false)} />}
       {picker && <SymbolPicker mode={picker} onClose={() => setPicker(null)} onPick={(a) => { setPicker(null); nav(`/assets/${a.symbol}${picker === "search" ? "" : `?trade=${picker}`}`); }} />}

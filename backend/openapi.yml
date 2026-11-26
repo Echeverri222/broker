@@ -74,6 +74,18 @@ paths:
                 "$ref": "#/components/schemas/MarketStatus"
         default:
           "$ref": "#/components/responses/Error"
+  "/status":
+    get:
+      summary: Public service status (provider health, trading switch)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ServiceStatus"
+        default:
+          "$ref": "#/components/responses/Error"
   "/market/overview":
     get:
       summary: Market strip (S&P 500, Nasdaq, Bitcoin) from cached quotes
@@ -815,6 +827,48 @@ paths:
           description: No content
         default:
           "$ref": "#/components/responses/Error"
+  "/admin/assets":
+    get:
+      summary: Assets with quote age and active flag
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: active, in: query, schema: { type: string, enum: ["true", "false"] } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  assets:
+                    type: array
+                    items:
+                      "$ref": "#/components/schemas/AdminAsset"
+        default:
+          "$ref": "#/components/responses/Error"
+  "/admin/assets/{symbol}":
+    patch:
+      summary: Enable or disable an asset (disabled assets can be sold, not bought)
+      parameters:
+        - { name: symbol, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                active: { type: boolean }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AdminAsset"
+        default:
+          "$ref": "#/components/responses/Error"
   "/admin/settings":
     get:
       summary: Runtime settings
@@ -962,6 +1016,29 @@ components:
           type: string
       required:
       - reauthenticated_until
+    ServiceStatus:
+      type: object
+      properties:
+        trading_enabled: { type: boolean }
+        market_open: { type: boolean }
+        providers:
+          type: object
+          additionalProperties:
+            type: string
+            enum: [closed, half_open, open]
+        quotes_updated_seconds_ago: { type: integer, nullable: true }
+        degraded: { type: boolean }
+    AdminAsset:
+      type: object
+      properties:
+        symbol: { type: string }
+        name: { type: string }
+        kind: { type: string }
+        active: { type: boolean }
+        held_by: { type: integer }
+        quote_age_seconds: { type: integer, nullable: true }
+        last_price: { type: string, nullable: true }
+        provider: { type: string }
     AdminUser:
       type: object
       properties:

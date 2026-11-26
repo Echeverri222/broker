@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, X } from "lucide-react";
 import { api, type MarketOverviewItem, type Portfolio } from "../lib/api";
 import { dash, money, qty } from "../lib/format";
-import { POLL, useMarket, useMarketOverview, useMe, usePortfolio } from "../lib/query";
+import { pollInterval, useMarket, useMarketOverview, useMe, usePortfolio } from "../lib/query";
 import { Button, Card, CardTitle, CornerLink, Delta, Empty, ErrorBox, HIT, Logo, Segmented, Skeleton, Sparkline, pillClass } from "../components/ui";
 import { Money } from "../components/Money";
 import { PriceChart } from "../components/PriceChart";
@@ -54,7 +54,7 @@ const toPts = (s?: { time: string; value: string }[] | null) => s?.map((p) => ({
 function PortfolioCard({ p }: { p: Portfolio }) {
   const [range, setRange] = useState<HomeRange>("1M");
   const [type, setType] = useState<ChartType>("line");
-  const hist = useQuery({ queryKey: ["history", range, true], queryFn: () => api.history(range, true), refetchInterval: POLL });
+  const hist = useQuery({ queryKey: ["history", range, true], queryFn: () => api.history(range, true), refetchInterval: () => pollInterval() });
   const bars = useMemo(() => pointsToBars(toPts(hist.data?.series)), [hist.data]);
   const bench = useMemo(() => toPts(hist.data?.benchmark?.series), [hist.data]);
   const h = hist.data;
@@ -118,7 +118,7 @@ function AccountsCard({ p }: { p: Portfolio }) {
 /** HOME-06: amber card, only while orders are waiting for the market to open. */
 function WaitingOrders() {
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["orders", "pending"], queryFn: () => api.orders({ status: "pending", limit: 50 }), refetchInterval: POLL });
+  const q = useQuery({ queryKey: ["orders", "pending"], queryFn: () => api.orders({ status: "pending", limit: 50 }), refetchInterval: () => pollInterval() });
   const cancel = useMutation({ mutationFn: (id: number) => api.cancelOrder(id), onSuccess: () => { ["orders", "portfolio", "me"].forEach((k) => void qc.invalidateQueries({ queryKey: [k] })); } });
   const list = q.data?.orders ?? [];
   if (list.length === 0) return null;
@@ -170,7 +170,7 @@ const dismissKey = (id?: number) => `pb_checklist_dismissed:${id ?? "anon"}`;
 export function Checklist({ userId }: { userId?: number }) {
   const [dismissed, setDismissed] = useState(() => { try { return localStorage.getItem(dismissKey(userId)) === "1"; } catch { return false; } });
   const orders = useQuery({ queryKey: ["orders", "checklist"], queryFn: () => api.orders({ status: "filled", limit: 200 }), staleTime: 15_000 });
-  const watch = useQuery({ queryKey: ["watchlist"], queryFn: api.watchlist, refetchInterval: POLL });
+  const watch = useQuery({ queryKey: ["watchlist"], queryFn: api.watchlist, refetchInterval: () => pollInterval() });
   if (dismissed || !orders.data || !watch.data) return null;
   const list = orders.data.orders;
   const steps: [string, boolean, string][] = [
@@ -201,7 +201,7 @@ export function Checklist({ userId }: { userId?: number }) {
 }
 
 function WatchCard() {
-  const watch = useQuery({ queryKey: ["watchlist"], queryFn: api.watchlist, refetchInterval: POLL });
+  const watch = useQuery({ queryKey: ["watchlist"], queryFn: api.watchlist, refetchInterval: () => pollInterval() });
   return (
     <Card aria-labelledby="watch-title">
       <div className="flex items-start justify-between"><CardTitle id="watch-title">Watchlist</CardTitle><CornerLink to="/markets?show=watching" label="Open watchlist" /></div>
