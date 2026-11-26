@@ -10,6 +10,7 @@ import Markets from "./pages/Markets";
 import AssetPage from "./pages/AssetPage";
 import Activity from "./pages/Activity";
 import Settings from "./pages/Settings";
+import { ForgotPassword, ResetPassword, VerifyEmail } from "./pages/Recovery";
 
 function Protected() {
   const me = useMe();
@@ -36,6 +37,9 @@ export default function App() {
   return (
     <Routes>
       <Route path="/welcome" element={me.data ? <Navigate to="/" replace /> : <Welcome />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
       <Route element={<Protected />}>
         <Route index element={<Dashboard />} />
         <Route path="markets" element={<Markets />} />

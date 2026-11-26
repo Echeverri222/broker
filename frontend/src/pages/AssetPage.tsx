@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Star } from "lucide-react";
 import { api, ApiError, type AssetDetail, type Interval, type Range } from "../lib/api";
 import { ageMinutes, ago, compactNumber, dash, formatOpen, money, price, priceOrDash, qty } from "../lib/format";
-import { POLL, useMarket, useMe } from "../lib/query";
+import { pollInterval, useMarket, useMe } from "../lib/query";
 import { Button, Card, CardTitle, Delta, ErrorBox, HIT, Logo, RangeBar, Segmented, Skeleton, Toggle } from "../components/ui";
 import { Money } from "../components/Money";
 import { PriceChart } from "../components/PriceChart";
@@ -74,7 +74,7 @@ export default function AssetPage() {
     const next = new URLSearchParams(sp); next.delete("trade"); setSp(next, { replace: true });
   }, [trade]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const asset = useQuery({ queryKey: ["asset", symbol], queryFn: () => api.asset(symbol), refetchInterval: POLL, retry: (n, e) => !(e instanceof ApiError) && n < 2 });
+  const asset = useQuery({ queryKey: ["asset", symbol], queryFn: () => api.asset(symbol), refetchInterval: () => pollInterval(), retry: (n, e) => !(e instanceof ApiError) && n < 2 });
   const candles = useQuery({ queryKey: ["candles", symbol, range, interval], queryFn: () => api.candles(symbol, range, interval ?? undefined), staleTime: 60_000 });
   const effInterval = candles.data?.interval ?? interval ?? "1d";
   const cmpQ = useQuery({ queryKey: ["candles", cmp, range, effInterval], enabled: !!cmp && !!candles.data, queryFn: () => api.candles(cmp as string, range, effInterval === "5m" ? undefined : effInterval), staleTime: 60_000 });

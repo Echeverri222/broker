@@ -1,0 +1,49 @@
+# OBS-04 (page) and OBS-05 (ticket). Prometheus alerting rules over the /metrics endpoint (OBS-03) plus the load
+# balancer, database and certificate exporters. `severity: page` wakes someone, `severity: ticket` is next working day.
+groups:
+  - name: paper-broker
+    rules:
+      - alert: High5xxRate
+        expr: sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) > 0.01
+        for: 5m
+        labels: { severity: page }
+      - alert: QueueLagging
+        expr: broker_queue_oldest_ready_seconds > 120
+        for: 2m
+        labels: { severity: page }
+      - alert: CriticalQueueLagging
+        expr: broker_queue_oldest_ready_seconds{queue="critical"} > 30
+        for: 1m
+        labels: { severity: page }
+      - alert: ProviderCircuitOpen
+        expr: broker_provider_circuit_open == 1
+        for: 5m
+        labels: { severity: page }
+      - alert: HeldQuotesStaleWhileOpen
+        expr: broker_held_quote_age_seconds_max > 600 and on() broker_market_open == 1
+        for: 2m
+        labels: { severity: page }
+      - alert: LedgerVerifyFailing
+        expr: broker_ledger_verify_problems > 0
+        labels: { severity: page }
+      - alert: DatabaseDiskHigh
+        expr: pg_disk_used_ratio > 0.8
+        for: 10m
+        labels: { severity: page }
+      - alert: CertificateExpiring
+        expr: probe_ssl_earliest_cert_expiry - time() < 14 * 86400
+        labels: { severity: page }
+      - alert: CalendarCoverageLow
+        expr: broker_calendar_days_remaining < 90
+        labels: { severity: ticket }
+      - alert: BackupTooOld
+        expr: time() - backup_last_success_timestamp_seconds > 26 * 3600
+        labels: { severity: ticket }
+      - alert: FailedJobsForADay
+        expr: broker_failed_jobs > 0
+        for: 24h
+        labels: { severity: ticket }
+      - alert: TradingPaused
+        expr: broker_trading_enabled == 0
+        for: 10m
+        labels: { severity: ticket }

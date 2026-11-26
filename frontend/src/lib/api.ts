@@ -16,7 +16,13 @@ export type Kind = "stock" | "etf" | "crypto";
 export interface Quote { price: string; previous_close: string | null; change: string; change_percent: string; as_of: string; fetched_at: string; stale: boolean }
 export interface Asset { symbol: string; name: string; kind: Kind; sector: string | null; logo_url: string | null; quote: Quote | null }
 export interface AssetDetail extends Asset { watched: boolean; stats: AssetStats; position: { quantity: string; average_cost: string; market_value: string | null } | null }
-export interface User { id: number; name: string; email: string; account: { cash: string; reserved_cash: string; net_deposits: string } }
+export interface Preferences { notify_order_filled: boolean; notify_order_rejected: boolean }
+export interface User {
+  id: number; name: string; email: string; account: { cash: string; reserved_cash: string; net_deposits: string };
+  verified?: boolean; admin?: boolean; trading_enabled?: boolean; preferences?: Preferences;
+}
+export interface DeviceSession { id: number; user_agent: string | null; ip_address: string | null; created_at: string; last_seen_at: string; current: boolean }
+export interface ServiceStatus { trading_enabled: boolean; market_open: boolean; providers: Record<string, "closed" | "half_open" | "open">; quotes_updated_seconds_ago: number | null; degraded: boolean }
 export interface MarketStatus { open: boolean; next_open: string | null; next_close: string | null; session: "regular" | "closed"; early_close: boolean }
 export interface Position { symbol: string; name: string; kind: Kind; quantity: string; average_cost: string; price: string | null; price_status: "ok" | "missing"; market_value: string | null; unrealized_pnl: string | null; unrealized_pnl_percent: string | null; day_change_percent: string; quote_as_of: string | null }
 export interface Portfolio { cash: string; reserved_cash: string; net_deposits: string; total_value: string; invested_value: string; day_change: string; day_change_percent: string; total_return: string; total_return_percent: string; incomplete: boolean; positions: Position[] }
@@ -77,4 +83,17 @@ export const api = {
   watch: (symbol: string) => request<Asset>("/watchlist", { method: "POST", json: { symbol } }),
   unwatch: (symbol: string) => request<void>(`/watchlist/${encodeURIComponent(symbol)}`, { method: "DELETE" }),
   reset: () => request<User>("/account/reset", { method: "POST", json: { confirm: "RESET" } }),
+  // v4: sessions and account lifecycle
+  sessions: () => request<{ sessions: DeviceSession[] }>("/sessions"),
+  revokeSession: (id: number) => request<void>(`/sessions/${id}`, { method: "DELETE" }),
+  revokeOtherSessions: () => request<void>("/sessions", { method: "DELETE" }),
+  changePassword: (b: { current_password: string; password: string }) => request<void>("/account/password", { method: "PATCH", json: b }),
+  preferences: (b: Partial<Preferences>) => request<User>("/account/preferences", { method: "PATCH", json: b }),
+  exportData: () => request<Record<string, unknown>>("/account/export"),
+  deleteAccount: (b: { confirm: "DELETE"; password: string }) => request<void>("/account", { method: "DELETE", json: b }),
+  requestPasswordReset: (email: string) => request<void>("/password_reset", { method: "POST", json: { email } }),
+  resetPassword: (b: { token: string; password: string }) => request<void>("/password_reset", { method: "PATCH", json: b }),
+  verifyEmail: (token: string) => request<void>("/email_verification", { method: "PATCH", json: { token } }),
+  resendVerification: () => request<void>("/email_verification", { method: "POST", json: {} }),
+  status: () => request<ServiceStatus>("/status"),
 };

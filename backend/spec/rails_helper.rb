@@ -20,5 +20,9 @@ RSpec.configure do |config|
   config.filter_run_when_matching :focus
   config.include FactoryBot::Syntax::Methods
   config.include ActiveSupport::Testing::TimeHelpers
-  config.before { Clock.reset!; Rails.cache.clear; ApplicationController.cache_store.clear }
+  config.before do
+    Clock.reset!; Rails.cache.clear; ApplicationController.cache_store.clear
+    ActiveJob::Base.queue_adapter.enqueued_jobs.clear if ActiveJob::Base.queue_adapter.respond_to?(:enqueued_jobs)
+    ActionMailer::Base.deliveries.clear
+  end
 end

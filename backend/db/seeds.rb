@@ -35,7 +35,11 @@ ASSETS.each do |symbol, name, kind, ref|
   asset.update!(name: name, kind: kind, provider_ref: ref, active: true, sector: Asset.sector_for(Asset.new(symbol: symbol, kind: kind)))
 end
 
-Quotes::Refresh.call(force: true)
-MarketData::Warm.call(throttle: 0.1) # DAT-06: sparklines, 52-week range and volume for the Markets list
+# OPS-03: in production the release step must not call a provider; RefreshQuotesJob and WarmMarketDataJob fill the
+# data within minutes. Locally (and with SEED_REFRESH=1) seed once so the app is usable immediately.
+if !Rails.env.production? || ENV["SEED_REFRESH"] == "1"
+  Quotes::Refresh.call(force: true)
+  MarketData::Warm.call(throttle: 0.1) # DAT-06: sparklines, 52-week range and volume for the Markets list
+end
 missing = Asset.active.left_joins(:quote).where(quotes: { id: nil }).pluck(:symbol)
 puts "Seeded #{Asset.count} assets, #{Quote.count} live quotes#{missing.any? ? " (no quote yet for: #{missing.join(', ')} — the refresh job will retry)" : ''}"

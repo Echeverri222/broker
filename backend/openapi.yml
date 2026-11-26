@@ -2,8 +2,8 @@
 openapi: 3.0.3
 info:
   title: Paper Broker API
-  version: 3.0.0
-  description: Contract for PRD v2 and v3 (UI redesign data). Decimals are strings with a fixed scale.
+  version: 4.0.0
+  description: "Contract for PRD v2, v3 (UI redesign data) and v4 (multi-user: sessions, account lifecycle, admin). Decimals are strings with a fixed scale."
 servers:
 - url: "/api/v1"
 paths:
@@ -72,6 +72,18 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/MarketStatus"
+        default:
+          "$ref": "#/components/responses/Error"
+  "/status":
+    get:
+      summary: Public service status (provider health, trading switch)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ServiceStatus"
         default:
           "$ref": "#/components/responses/Error"
   "/market/overview":
@@ -554,8 +566,552 @@ paths:
           application/json:
             schema:
               type: object
+  "/sessions":
+    get:
+      summary: List my active sessions
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SessionList"
+        default:
+          "$ref": "#/components/responses/Error"
+    delete:
+      summary: Sign out every other device
+      responses:
+        '204':
+          description: No content
+        default:
+          "$ref": "#/components/responses/Error"
+  "/sessions/{id}":
+    delete:
+      summary: Revoke one of my sessions
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '204':
+          description: No content
+        default:
+          "$ref": "#/components/responses/Error"
+  "/password_reset":
+    post:
+      summary: Request a password reset email (always 202)
+      responses:
+        '202':
+          description: No content
+        default:
+          "$ref": "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+    patch:
+      summary: Set a new password with a reset token
+      responses:
+        '204':
+          description: No content
+        default:
+          "$ref": "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+  "/email_verification":
+    post:
+      summary: Resend the confirmation email
+      responses:
+        '202':
+          description: No content
+        default:
+          "$ref": "#/components/responses/Error"
+    patch:
+      summary: Confirm an email address with a token
+      responses:
+        '204':
+          description: No content
+        default:
+          "$ref": "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+  "/account/password":
+    patch:
+      summary: Change password
+      responses:
+        '204':
+          description: No content
+        default:
+          "$ref": "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+  "/account/preferences":
+    patch:
+      summary: Update notification preferences
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/User"
+        default:
+          "$ref": "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+  "/account/export":
+    get:
+      summary: Export my own data
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountExport"
+        default:
+          "$ref": "#/components/responses/Error"
+  "/account":
+    delete:
+      summary: Delete (anonymise) my account
+      responses:
+        '204':
+          description: No content
+        default:
+          "$ref": "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+  "/admin/reauth":
+    post:
+      summary: Confirm password for admin tools
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AdminReauth"
+        default:
+          "$ref": "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+  "/admin/users":
+    get:
+      summary: Find users
+      parameters:
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AdminUserList"
+        default:
+          "$ref": "#/components/responses/Error"
+  "/admin/users/{id}":
+    get:
+      summary: One user
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AdminUser"
+        default:
+          "$ref": "#/components/responses/Error"
+  "/admin/users/{id}/disable":
+    post:
+      summary: Disable a user
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AdminUser"
+        default:
+          "$ref": "#/components/responses/Error"
+  "/admin/users/{id}/enable":
+    post:
+      summary: Enable a user
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AdminUser"
+        default:
+          "$ref": "#/components/responses/Error"
+  "/admin/users/{id}/revoke_sessions":
+    post:
+      summary: Revoke all of a user's sessions
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AdminUser"
+        default:
+          "$ref": "#/components/responses/Error"
+  "/admin/users/{id}/password_reset":
+    post:
+      summary: Send a user a password reset email
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '202':
+          description: No content
+        default:
+          "$ref": "#/components/responses/Error"
+  "/admin/assets":
+    get:
+      summary: Assets with quote age and active flag
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: active, in: query, schema: { type: string, enum: ["true", "false"] } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  assets:
+                    type: array
+                    items:
+                      "$ref": "#/components/schemas/AdminAsset"
+        default:
+          "$ref": "#/components/responses/Error"
+  "/admin/assets/{symbol}":
+    patch:
+      summary: Enable or disable an asset (disabled assets can be sold, not bought)
+      parameters:
+        - { name: symbol, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                active: { type: boolean }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AdminAsset"
+        default:
+          "$ref": "#/components/responses/Error"
+  "/admin/settings":
+    get:
+      summary: Runtime settings
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AdminSettings"
+        default:
+          "$ref": "#/components/responses/Error"
+    patch:
+      summary: Change runtime settings (trading kill switch)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AdminSettings"
+        default:
+          "$ref": "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+  "/admin/queues":
+    get:
+      summary: Queue depth and failed jobs
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AdminQueues"
+        default:
+          "$ref": "#/components/responses/Error"
+  "/admin/jobs/{id}/retry":
+    post:
+      summary: Retry a failed job
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '204':
+          description: No content
+        default:
+          "$ref": "#/components/responses/Error"
+  "/admin/jobs/{id}":
+    delete:
+      summary: Discard a failed job
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '204':
+          description: No content
+        default:
+          "$ref": "#/components/responses/Error"
+  "/admin/audit_events":
+    get:
+      summary: Recent audit events
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AdminAuditEvents"
+        default:
+          "$ref": "#/components/responses/Error"
 components:
   schemas:
+    SessionList:
+      type: object
+      properties:
+        sessions:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              current:
+                type: boolean
+              user_agent:
+                type: string
+                nullable: true
+              ip_address:
+                type: string
+                nullable: true
+              created_at:
+                type: string
+              last_seen_at:
+                type: string
+              expires_at:
+                type: string
+            required:
+            - id
+            - current
+            - created_at
+            - last_seen_at
+            - expires_at
+      required:
+      - sessions
+    AccountExport:
+      type: object
+      properties:
+        exported_at:
+          type: string
+        user:
+          type: object
+        deposits:
+          type: array
+          items:
+            type: object
+        orders:
+          type: array
+          items:
+            type: object
+        positions:
+          type: array
+          items:
+            type: object
+      required:
+      - exported_at
+      - user
+      - deposits
+      - orders
+      - positions
+    AdminReauth:
+      type: object
+      properties:
+        reauthenticated_until:
+          type: string
+      required:
+      - reauthenticated_until
+    ServiceStatus:
+      type: object
+      properties:
+        trading_enabled: { type: boolean }
+        market_open: { type: boolean }
+        providers:
+          type: object
+          additionalProperties:
+            type: string
+            enum: [closed, half_open, open]
+        quotes_updated_seconds_ago: { type: integer, nullable: true }
+        degraded: { type: boolean }
+    AdminAsset:
+      type: object
+      properties:
+        symbol: { type: string }
+        name: { type: string }
+        kind: { type: string }
+        active: { type: boolean }
+        held_by: { type: integer }
+        quote_age_seconds: { type: integer, nullable: true }
+        last_price: { type: string, nullable: true }
+        provider: { type: string }
+    AdminUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        verified:
+          type: boolean
+        admin:
+          type: boolean
+        disabled:
+          type: boolean
+        deleted:
+          type: boolean
+        created_at:
+          type: string
+        active_sessions:
+          type: integer
+        account:
+          type: object
+          nullable: true
+      required:
+      - id
+      - email
+      - disabled
+    AdminUserList:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            "$ref": "#/components/schemas/AdminUser"
+      required:
+      - users
+    AdminSettings:
+      type: object
+      properties:
+        trading_enabled:
+          type: boolean
+      required:
+      - trading_enabled
+    AdminQueues:
+      type: object
+      properties:
+        available:
+          type: boolean
+        depth:
+          type: object
+          additionalProperties:
+            type: integer
+        oldest_ready_seconds:
+          type: integer
+          nullable: true
+        failed:
+          type: array
+          items:
+            type: object
+      required:
+      - available
+      - depth
+      - failed
+    AdminAuditEvents:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            type: object
+      required:
+      - events
     Error:
       type: object
       properties:
@@ -580,6 +1136,11 @@ components:
               - rate_limited
               - price_unavailable
               - internal
+              - account_disabled
+              - forbidden
+              - invalid_token
+              - trading_paused
+              - reauth_required
             message:
               type: string
             details:
@@ -815,6 +1376,22 @@ components:
           type: string
         email:
           type: string
+        verified:
+          type: boolean
+        admin:
+          type: boolean
+        trading_enabled:
+          type: boolean
+        preferences:
+          type: object
+          properties:
+            notify_order_filled:
+              type: boolean
+            notify_order_rejected:
+              type: boolean
+          required:
+          - notify_order_filled
+          - notify_order_rejected
         account:
           type: object
           properties:

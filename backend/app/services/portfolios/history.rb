@@ -1,6 +1,7 @@
 module Portfolios
   # PERF-04..08: value series, range return (excluding deposits) and the optional SPY benchmark.
   class History
+    MAX_POINTS = 600 # SCL-09
     RANGES = { "1D" => 1.day, "1W" => 7.days, "1M" => 30.days, "3M" => 90.days, "1Y" => 365.days, "ALL" => nil }.freeze
 
     def self.call(account, range:, benchmark: false, now: Clock.now) = new(account, range, benchmark, now).call
@@ -19,12 +20,26 @@ module Portfolios
 
       series = (in_range.map { |s| [ s.taken_at, s.total_value ] } + [ [ @now, v.total_value ] ])
       series = series.sort_by(&:first).each_with_object({}) { |(t, val), h| h[t.to_i] = [ t, val ] }.values # PERF-06: unique timestamps
+      series = self.class.downsample(series, MAX_POINTS) # SCL-09: the benchmark below reuses exactly these times
       points = series.map { |t, val| { time: Fmt.iso(t), value: Fmt.money(val) } }
 
       body = range_return(start, v).merge(range: @range, series: points)
       body[:incomplete] = v.incomplete
       attach_benchmark(body, series) if @benchmark
       body
+    end
+
+    # SCL-09: at most `max` points. The first and last point are always kept; between them every bucket keeps its lowest
+    # and highest value, so peaks and drawdowns survive. Input is sorted by time, output too.
+    def self.downsample(series, max)
+      return series if series.size <= max
+      inner = series[1..-2]
+      buckets = (max - 2) / 2
+      size = (inner.size + buckets - 1) / buckets # integer ceiling (MON-01: no floats here)
+      kept = inner.each_slice(size).flat_map do |slice|
+        [ slice.min_by { |_, v| v }, slice.max_by { |_, v| v } ].uniq
+      end
+      [ series.first, *kept.sort_by { |t, _| t }, series.last ]
     end
 
     private

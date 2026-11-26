@@ -48,13 +48,11 @@ RSpec.describe "API", type: :request do
     end
 
     it "rate limits login to 10 per 3 minutes per IP [AUTH-04]" do
-      original = ApplicationController.cache_store
-      ApplicationController.cache_store = ActiveSupport::Cache::MemoryStore.new
+      # Do not swap the cache store here: `rate_limit` captures it when the controller class loads, so a throwaway
+      # store would leak its counters into later examples. The global before-hook clears the real one.
       11.times { api(:post, "/session", { email: "x@example.com", password: "nopenope1" }) }
       expect(response).to have_http_status(429)
       expect(json[:error][:code]).to eq("rate_limited")
-    ensure
-      ApplicationController.cache_store = original
     end
 
     it "logout deletes the server session so a replayed cookie gets 401 [AUTH-05]" do

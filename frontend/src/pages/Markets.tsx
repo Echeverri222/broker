@@ -4,7 +4,7 @@ import { keepPreviousData, useInfiniteQuery, useMutation, useQueryClient, type I
 import { Search, Star } from "lucide-react";
 import { api, type AssetList, type AssetListItem } from "../lib/api";
 
-import { POLL } from "../lib/query";
+import { pollInterval } from "../lib/query";
 import { Button, Delta, Empty, ErrorBox, FilterChip, HIT, Logo, RangeBar, Skeleton, Sparkline } from "../components/ui";
 import { Money } from "../components/Money";
 
@@ -55,7 +55,7 @@ export default function Markets() {
   const filter = [...(f.show === "watching" || f.show === "owned" ? [f.show] : []), ...f.picks].join(",") || undefined;
   const key = ["assets", f.q, kind, filter, f.sort, f.sector] as const;
   const list = useInfiniteQuery({
-    queryKey: key, initialPageParam: 1, placeholderData: keepPreviousData, refetchInterval: POLL,
+    queryKey: key, initialPageParam: 1, placeholderData: keepPreviousData, refetchInterval: () => pollInterval(),
     queryFn: ({ pageParam }) => api.assets({ q: f.q, kind, filter, sort: f.sort, sector: f.sector, page: pageParam, limit: PAGE }),
     getNextPageParam: (last, all) => (all.length * PAGE < last.meta.total ? all.length + 1 : undefined),
   });

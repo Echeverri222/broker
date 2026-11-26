@@ -1,0 +1,5 @@
+Hi <%= @user.name %>,
+
+Your <%= @order.side %> order for <%= @order.asset.symbol %> was filled: <%= @order.quantity.to_s("F") %> at $<%= @order.price.to_s("F") %> (total $<%= @order.total.to_s("F") %>).
+
+This is a simulated fill with virtual money.

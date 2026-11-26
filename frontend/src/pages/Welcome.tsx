@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
 import { Button, Logo } from "../components/ui";
 import { LineChart as Mark } from "lucide-react";
@@ -53,6 +53,7 @@ export default function Welcome() {
             {errors.password && <p role="alert" className="mt-1 text-sm text-loss">{errors.password.message}</p>}</div>
           {errors.root && <p role="alert" className="text-sm text-loss">{errors.root.message}</p>}
           <Button type="submit" className="min-h-[54px] w-full rounded-[14px] text-[17px]" disabled={m.isPending}>{m.isPending ? "One moment…" : mode === "signup" ? "Create account" : "Sign in"}</Button>
+          {mode === "login" && <p className="m-0 text-sm"><Link to="/forgot-password" className="inline-flex min-h-11 items-center font-semibold text-accent underline">Forgot your password?</Link></p>}
           <p className="m-0 text-sm text-mute">{mode === "signup" ? "Already have an account? " : "New here? "}
             <button type="button" onClick={() => setMode(mode === "signup" ? "login" : "signup")} className="inline-flex min-h-11 items-center font-semibold text-accent underline">
               {mode === "signup" ? "Sign in" : "Create an account"}

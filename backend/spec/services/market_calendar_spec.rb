@@ -38,7 +38,8 @@ RSpec.describe MarketCalendar do
 
   it "fails safe (closed, logged) past the end of the table [CAL-04]" do
     expect(Rails.logger).to receive(:error).with(/past the end of the table/)
-    s = described_class.status(et(2028, 6, 6, 11, 0))
+    past = described_class::COVERED_THROUGH + 30 # follows the table, so extending it never breaks this rule
+    s = described_class.status(et(past.year, past.month, past.day, 11, 0))
     expect(s).to include(open: false, next_open: nil)
   end
 

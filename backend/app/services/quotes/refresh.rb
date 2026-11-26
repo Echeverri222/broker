@@ -22,22 +22,33 @@ module Quotes
       end
     end
 
-    # Viewing an asset must never show a stale price just because the background worker is slow or absent.
-    # Refreshes this one asset inline when its quote is older than `max_age` seconds; provider failures are swallowed
-    # (the caller then shows whatever quote it has, flagged stale, and trading stays disabled).
-    def self.refresh_one(asset, max_age: 60)
+    COALESCE_FOR = 30.seconds
+
+    # MKD-01/02: the request path never calls a provider. When the stored quote is older than `max_age` seconds it
+    # asks for ONE background refresh (deduplicated per asset for COALESCE_FOR) and returns what it has; the caller
+    # flags it stale and trading stays disabled until the refresh lands. Returns the stored quote (possibly nil).
+    def self.request_refresh(asset, max_age: 60)
       q = asset.quote
-      return q if q && Time.current - q.fetched_at < max_age
+      return q if q && Clock.now - q.fetched_at < max_age
       return q if !asset.crypto? && !MarketCalendar.open? && q # equities don't move while the market is closed
-      fetched = MarketData.quotes([ asset ])[asset.id] or return q
-      rec = q || Quote.new(asset: asset)
+      RefreshAssetJob.perform_later(asset.id) if claim(asset)
+      q
+    end
+
+    # True for the first caller in each COALESCE_FOR window. Shared across processes through the cache.
+    def self.claim(asset) = Rails.cache.write("refresh_claim/#{asset.id}", Clock.now.to_i, expires_in: COALESCE_FOR, unless_exist: true)
+
+    # Runs inside RefreshAssetJob (never in a request). Provider failures are swallowed: the old quote stays.
+    def self.refresh_asset(asset)
+      fetched = MarketData.quotes([ asset ])[asset.id] or return asset.quote
+      rec = asset.quote || Quote.new(asset: asset)
       rec.update!(price: fetched.price, previous_close: fetched.previous_close, change_percent: fetched.change_percent,
-                  as_of: fetched.as_of, fetched_at: Time.current, stats: fetched.stats)
+                  as_of: fetched.as_of, fetched_at: Clock.now, stats: fetched.stats)
       asset.association(:quote).reset
       rec
     rescue MarketData::ProviderError, ActiveRecord::RecordInvalid => e
-      Rails.logger.warn("on-demand quote refresh failed for #{asset.symbol}: #{e.message}")
-      q
+      Rails.logger.warn("quote refresh failed for #{asset.symbol}: #{e.message}")
+      asset.quote
     end
 
     def self.touch_view(asset) = Rails.cache.write("asset_view:#{asset.id}", Time.current.to_i, expires_in: VIEW_WINDOW)
@@ -73,7 +84,8 @@ module Quotes
     end
 
     def priority_asset_ids
-      ids = Position.distinct.pluck(:asset_id) | WatchlistItem.distinct.pluck(:asset_id)
+      # Assets with a waiting order are priority too: the open-time fill needs a fresh price (MKD-05).
+      ids = Position.distinct.pluck(:asset_id) | WatchlistItem.distinct.pluck(:asset_id) | Order.pending.distinct.pluck(:asset_id)
       keys = Asset.active.pluck(:id).to_h { |id| [ "asset_view:#{id}", id ] }
       viewed = Rails.cache.read_multi(*keys.keys).keys.map { |k| keys[k] }
       ids | viewed
