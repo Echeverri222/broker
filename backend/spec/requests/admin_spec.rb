@@ -1,6 +1,6 @@
 require "rails_helper"
 
-# PRD v4 §12: admin tools, kill switch, health, notifications and calendar coverage.
+# PRD v4 §12: admin tools, kill switch, health, notifications and calendar coverage (ADM-01..05, NTF-01..03, OBS-06, CAL-07).
 RSpec.describe "Admin, operations and notifications [ADM, NTF, OBS, CAL]", type: :request do
   before { Clock.override = -> { BrokerHelpers::OPEN_TIME } }
 
@@ -170,6 +170,54 @@ RSpec.describe "Admin, operations and notifications [ADM, NTF, OBS, CAL]", type:
     end
   end
 
+  describe "asset switch [ADM-03]" do
+    let!(:admin) { reauthed_admin }
+
+    it "lists assets with quote age and provider, searchable and filterable" do
+      with_asset(symbol: "AAPL", price: "100", fetched_at: Clock.now - 90.seconds)
+      with_asset(symbol: "BTC", kind: "crypto", price: "50000")
+      all = admin.get("/admin/assets").json[:assets]
+      expect(all.map { |a| a[:symbol] }).to eq(%w[AAPL BTC])
+      expect(all.first).to include(active: true, quote_age_seconds: 90, provider: "yahoo", held_by: 0)
+      expect(all.last[:provider]).to eq("coingecko")
+      expect(admin.get("/admin/assets?q=btc").json[:assets].size).to eq(1)
+      expect(admin.get("/admin/assets?active=false").json[:assets]).to be_empty
+    end
+
+    it "disables an asset: buys are blocked, sells of an existing position still work, and it is audited" do
+      with_asset(symbol: "AAPL", price: "100")
+      holder = client.sign_up
+      holder.call(:post, "/orders", { symbol: "AAPL", side: "buy", amount: "1000" }, { "Idempotency-Key" => "h1" })
+      expect(holder.status).to eq(201)
+
+      expect(admin.patch("/admin/assets/AAPL", { active: false }).json[:held_by]).to eq(1)
+      expect(AuditEvent.find_by(event: "admin_asset_changed").metadata).to include("symbol" => "AAPL", "active" => false)
+
+      buy = holder.call(:post, "/orders", { symbol: "AAPL", side: "buy", amount: "10" }, { "Idempotency-Key" => "h2" })
+      expect([ buy.status, buy.code ]).to eq([ 422, "validation_failed" ])
+      sell = holder.call(:post, "/orders", { symbol: "AAPL", side: "sell", sell_all: true }, { "Idempotency-Key" => "h3" })
+      expect(sell.status).to eq(201)
+      expect(Position.where(asset: Asset.find_by!(symbol: "AAPL")).sum(:quantity)).to eq(0)
+    end
+
+    it "hides a disabled asset from search and detail, and re-enabling restores buying" do
+      with_asset(symbol: "AAPL", price: "100")
+      user = client.sign_up
+      admin.patch("/admin/assets/AAPL", { active: false })
+      expect(user.get("/assets/AAPL").status).to eq(404)
+      expect(user.get("/assets?q=AAPL").json[:assets]).to be_empty
+      admin.patch("/admin/assets/AAPL", { active: true })
+      expect(user.get("/assets/AAPL").status).to eq(200)
+      expect(user.call(:post, "/orders", { symbol: "AAPL", side: "buy", amount: "10" }, { "Idempotency-Key" => "r1" }).status).to eq(201)
+    end
+
+    it "validates input and answers 404 for unknown symbols" do
+      with_asset(symbol: "AAPL", price: "100")
+      expect(admin.patch("/admin/assets/AAPL", { active: "no" }).status).to eq(422)
+      expect(admin.patch("/admin/assets/ZZZZ", { active: false }).status).to eq(404)
+    end
+  end
+
   describe "queues and audit trail [ADM-04, SEC-09]" do
     let!(:admin) { reauthed_admin }
 
@@ -318,6 +366,12 @@ RSpec.describe "Admin, operations and notifications [ADM, NTF, OBS, CAL]", type:
       mail = UserMailer.order_filled(order)
       expect(mail.content_type).to match(%r{text/plain})
       expect(mail.body.to_s).not_to match(/password|token|cash/i)
+    end
+
+    it "offers only the five transactional emails: no marketing, no push, no SMS [NTF-03]" do
+      expect(UserMailer.action_methods.sort).to eq(%w[order_filled order_rejected password_changed password_reset verify_email])
+      expect(User.column_names.grep(/marketing|sms|push|newsletter/i)).to be_empty
+      expect(Dir[Rails.root.join("app/mailers/*.rb")].map { |f| File.basename(f) }).to contain_exactly("application_mailer.rb", "user_mailer.rb")
     end
 
     it "sends password mail without the old password and with a single-purpose link" do

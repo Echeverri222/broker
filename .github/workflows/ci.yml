@@ -28,6 +28,12 @@ jobs:
       - run: bin/bundler-audit
       - run: bundle exec rspec
       - run: bin/rails ledger:verify
+      - name: Nothing secret or generated is tracked (OPS-08)
+        working-directory: .
+        run: |
+          if git ls-files | grep -E '(^|/)(master\.key|\.env)$|(^|/)log/.+\.log$|(^|/)coverage/|\.bak$'; then
+            echo "tracked files that must not be in git"; exit 1
+          fi
 
   frontend:
     runs-on: ubuntu-latest
@@ -48,3 +54,18 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with: { ruby-version: "3.4" }
       - run: script/rule_coverage
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2   # SEC-08
+        env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+
+  images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t paper-broker-api backend
+      - run: docker build -f frontend/Dockerfile -t paper-broker-web .

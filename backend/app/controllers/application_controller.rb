@@ -4,6 +4,7 @@ class ApplicationController < ActionController::API
   COOKIE = :pb_session
 
   before_action :require_json!
+  before_action { response.headers["Cache-Control"] = "private, no-store" } # SCL-13: per-user by default
 
   # SEC-02: a general per-user limit (per IP when anonymous). Endpoint-specific limits are declared in each controller.
   rate_limit to: 600, within: 1.minute, name: "general", by: -> { limit_key }, with: -> { rate_limited!(60) }
@@ -11,6 +12,9 @@ class ApplicationController < ActionController::API
   # Declared first so every more specific handler below takes precedence (Rails checks last-declared first).
   rescue_from StandardError do |e|
     Rails.logger.error("#{e.class}: #{e.message}\n#{e.backtrace&.first(10)&.join("\n")}")
+    # OBS-01: hand the exception to whatever error tracker is subscribed (Rails.error), with ids only, never emails.
+    Rails.error.report(e, handled: true, severity: :error, source: "api",
+                       context: { request_id: request.request_id, user_id: current_user&.id, route: "#{request.method} #{request.path}" })
     render json: { error: { code: "internal", message: "Something went wrong. Please try again." } }, status: 500
   end
   rescue_from ActionDispatch::Http::Parameters::ParseError do
@@ -31,6 +35,12 @@ class ApplicationController < ActionController::API
   end
 
   private
+
+  # SCL-13: shared market data (status, overview, candles) may be cached by browsers and CDNs. ETags come from
+  # Rack::ETag, so a repeat request with If-None-Match gets a 304 without a body.
+  def cache_publicly(seconds)
+    response.headers["Cache-Control"] = "public, max-age=#{seconds}"
+  end
 
   # AUTH-06 (CSRF defense): state-changing requests must be JSON. DELETEs must accept JSON and,
   # when the browser sends an Origin, it must be ours.

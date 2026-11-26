@@ -28,7 +28,11 @@ module Orders
     def call
       raise_if_paused!
       validate_input!
-      asset = Asset.active.find_by(symbol: @symbol) or raise ApiError.new(:not_found, "Unknown asset #{@symbol}")
+      asset = Asset.find_by(symbol: @symbol) or raise ApiError.new(:not_found, "Unknown asset #{@symbol}")
+      # ADM-03: a disabled asset keeps its positions and can be sold, but cannot be bought.
+      if !asset.active? && @side == "buy"
+        raise ApiError.new(:validation_failed, "#{asset.symbol} is not available for buying right now.")
+      end
 
       if (existing = @account.orders.find_by(idempotency_key: @key))
         return replay(existing)

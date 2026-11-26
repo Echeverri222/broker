@@ -69,6 +69,7 @@ module Api
           raise ApiError.new(:validation_failed, e.message)
         end
         data = MarketData.candles(asset, range: range, interval: interval)
+        cache_publicly(60)
         render json: { symbol: asset.symbol, range: range, interval: interval,
                        candles: data.map { |c| { time: c.time, open: Fmt.price(c.open), high: Fmt.price(c.high), low: Fmt.price(c.low), close: Fmt.price(c.close),
                                                  volume: c.volume&.to_s } } }

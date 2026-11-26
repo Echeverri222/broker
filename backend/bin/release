@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# OPS-03: runs once per deploy, before the new web and worker processes start. Idempotent.
+set -euo pipefail
+bin/rails db:prepare
+# Solid Cache and Solid Queue keep their own databases; load their schemas the first time.
+bin/rails runner 'exit(SolidCache::Entry.connection.table_exists?("solid_cache_entries") ? 0 : 1)' || bin/rails db:schema:load:cache
+bin/rails runner 'exit(SolidQueue::Job.connection.table_exists?("solid_queue_jobs") ? 0 : 1)' || bin/rails db:schema:load:queue
+# Seeds only create missing assets. They never call a market data provider; RefreshQuotesJob fills the quotes (MKD-04).
+bin/rails db:seed

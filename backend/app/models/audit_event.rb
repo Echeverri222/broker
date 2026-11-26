@@ -2,7 +2,7 @@
 class AuditEvent < ApplicationRecord
   EVENTS = %w[signup login_success login_failure logout password_changed password_reset_requested password_reset
               email_verified session_revoked sessions_revoked account_deleted account_reset
-              admin_user_disabled admin_user_enabled admin_sessions_revoked admin_trading_changed admin_reauth
+              admin_user_disabled admin_user_enabled admin_sessions_revoked admin_trading_changed admin_asset_changed admin_reauth
               admin_job_retried admin_job_discarded].freeze
 
   belongs_to :user, optional: true

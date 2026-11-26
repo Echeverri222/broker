@@ -18,4 +18,16 @@ module DeployConfig
     list = value.to_s.split(",").map(&:strip).reject(&:empty?)
     list.empty? ? nil : list
   end
+
+  # OPS-05: connections the deployment can need must fit under the database's limit. Returns a message, or nil if fine.
+  #   web:    WEB_PROCESSES x RAILS_MAX_THREADS      worker: every worker thread + dispatcher      plus 5 spare
+  def pool_problem(env)
+    limit = Integer(env.fetch("DB_POOL_LIMIT", 0))
+    return nil if limit <= 0 # no declared limit, nothing to check
+    web = Integer(env.fetch("WEB_PROCESSES", 1)) * Integer(env.fetch("RAILS_MAX_THREADS", 3))
+    worker = Integer(env.fetch("JOB_CRITICAL_THREADS", 2)) + Integer(env.fetch("JOB_DEFAULT_THREADS", 3)) * Integer(env.fetch("JOB_CONCURRENCY", 1)) +
+             Integer(env.fetch("JOB_LOW_THREADS", 1)) + 1
+    need = web + worker + 5
+    need > limit ? "database pool: need #{need} connections (web #{web} + worker #{worker} + 5) but DB_POOL_LIMIT is #{limit}" : nil
+  end
 end

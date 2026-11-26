@@ -1,9 +1,11 @@
 Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
   get "up/deep" => "health#deep"
+  get "metrics" => "metrics#show"
 
   namespace :api do
     namespace :v1 do
+      get "status", to: "status#show"
       post "signup", to: "signups#create"
       resource :session, only: %i[create destroy]
       get "me", to: "me#show"
@@ -45,6 +47,8 @@ Rails.application.routes.draw do
         post "jobs/:id/retry", to: "jobs#retry"
         delete "jobs/:id", to: "jobs#discard"
         get "audit_events", to: "audit_events#index"
+        get "assets", to: "assets#index"
+        patch "assets/:symbol", to: "assets#update"
       end
     end
   end

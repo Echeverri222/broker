@@ -555,7 +555,7 @@ RSpec.describe "Sessions and accounts [SES, SEC]", type: :request do
   end
 
   describe "authorization by construction [SEC-05, AUTH-07]" do
-    PUBLIC = [ "POST /api/v1/signup", "POST /api/v1/session", "DELETE /api/v1/session", "GET /api/v1/market/status", "GET /api/v1/market/overview",
+    PUBLIC = [ "POST /api/v1/signup", "POST /api/v1/session", "DELETE /api/v1/session", "GET /api/v1/market/status", "GET /api/v1/market/overview", "GET /api/v1/status",
                "POST /api/v1/password_reset", "PATCH /api/v1/password_reset", "PATCH /api/v1/email_verification" ].freeze
 
     def api_routes
@@ -586,7 +586,7 @@ RSpec.describe "Sessions and accounts [SES, SEC]", type: :request do
       "GET /api/v1/assets/:symbol" => :shared_catalog, "GET /api/v1/assets/:symbol/candles" => :shared_catalog,
       "GET /api/v1/admin/users/:id" => :admin, "POST /api/v1/admin/users/:id/disable" => :admin, "POST /api/v1/admin/users/:id/enable" => :admin,
       "POST /api/v1/admin/users/:id/revoke_sessions" => :admin, "POST /api/v1/admin/users/:id/password_reset" => :admin,
-      "POST /api/v1/admin/jobs/:id/retry" => :admin, "DELETE /api/v1/admin/jobs/:id" => :admin
+      "PATCH /api/v1/admin/assets/:symbol" => :admin, "POST /api/v1/admin/jobs/:id/retry" => :admin, "DELETE /api/v1/admin/jobs/:id" => :admin
     }.freeze
 
     it "classifies every route that takes an :id or :symbol" do

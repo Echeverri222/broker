@@ -12,6 +12,9 @@ default: &default
   ledger_verify:
     class: LedgerVerifyJob
     schedule: every hour at minute 41
+  compact_snapshots:
+    class: CompactSnapshotsJob
+    schedule: every day at 3:45am
   prune_sessions:
     class: PruneSessionsJob
     schedule: every day at 3:15am
