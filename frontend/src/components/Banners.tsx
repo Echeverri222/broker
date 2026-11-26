@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { useMe } from "../lib/query";
@@ -6,6 +7,8 @@ import { useMe } from "../lib/query";
 export function Banners() {
   const { data: me } = useMe();
   const resend = useMutation({ mutationFn: api.resendVerification });
+  const [hidden, setHidden] = useState(() => { try { return sessionStorage.getItem("hide-verify") === "1"; } catch { return false; } });
+  const dismiss = () => { setHidden(true); try { sessionStorage.setItem("hide-verify", "1"); } catch { /* ignore */ } };
   if (!me) return null;
   return (
     <>
@@ -14,7 +17,7 @@ export function Banners() {
           Trading is paused for maintenance. Your cash and positions are safe. You can still look around and cancel waiting orders.
         </div>
       )}
-      {me.verified === false && (
+      {me.verified === false && !hidden && (
         <div role="status" className="flex flex-wrap items-center justify-center gap-x-3 border-b border-line bg-well px-4 py-2.5 text-sm">
           <span>Confirm your email to keep your account recoverable. We sent a link to <strong>{me.email}</strong>.</span>
           {resend.isSuccess
@@ -23,6 +26,7 @@ export function Banners() {
                 {resend.isPending ? "Sending…" : "Resend"}
               </button>}
           {resend.isError && <span role="alert" className="text-loss">{(resend.error as Error).message}</span>}
+          <button type="button" onClick={dismiss} className="inline-flex min-h-11 items-center text-mute underline">Hide for now</button>
         </div>
       )}
     </>

@@ -42,17 +42,17 @@ export function DepositSheet({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end bg-scrim md:items-center md:justify-center" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" aria-label="Add cash" className="sheet w-full rounded-t-3xl bg-card p-5 shadow-2xl md:w-[400px] md:rounded-3xl">
+      <div role="dialog" aria-modal="true" aria-label="Add cash" className="sheet w-full bg-card p-5 shadow-2xl md:w-[400px] rounded-t-md md:rounded-none">
         <div className="mb-3 flex items-start justify-between">
           <div>
             <h2 className="text-lg font-bold">{done ? "Cash added" : "Add virtual cash"}</h2>
             <p className="text-sm text-mute">No real money moves. Deposits don't count as investment gains.</p>
           </div>
-          <button onClick={onClose} aria-label="Close" className="grid size-10 place-items-center rounded-xl text-xl hover:bg-well">×</button>
+          <button onClick={onClose} aria-label="Close" className="grid size-10 place-items-center text-xl hover:bg-well">×</button>
         </div>
         {done ? (
           <div aria-live="polite">
-            <p className="rounded-xl bg-bg p-3 text-sm">Deposited <strong>{money(done.amount)}</strong>. New cash balance: <strong>{money(done.cash ?? 0)}</strong>.</p>
+            <p className=" bg-bg p-3 text-sm">Deposited <strong>{money(done.amount)}</strong>. New cash balance: <strong>{money(done.cash ?? 0)}</strong>.</p>
             <Button className="mt-4 w-full" onClick={onClose}>Done</Button>
           </div>
         ) : (
@@ -62,7 +62,7 @@ export function DepositSheet({ onClose }: { onClose: () => void }) {
             </div>
             <label htmlFor="deposit-amount" className="mb-1 block text-sm font-medium">Amount (USD)</label>
             <input id="deposit-amount" inputMode="decimal" autoFocus autoComplete="off" placeholder="0.00" aria-invalid={!!errors.amount}
-              className="min-h-12 w-full rounded-xl border border-line bg-bg px-3 text-xl font-semibold" {...register("amount", { setValueAs: cleanNumber })} />
+              className="min-h-12 w-full border border-line bg-bg px-3 text-xl font-semibold rounded-md" {...register("amount", { setValueAs: cleanNumber })} />
             {errors.amount && <p role="alert" className="mt-1 text-sm text-loss">{errors.amount.message}</p>}
             <Button type="submit" className="mt-4 w-full" disabled={m.isPending}>{m.isPending ? "Adding…" : "Add cash"}</Button>
           </form>

@@ -26,13 +26,13 @@ export default function Welcome() {
     onSuccess: (u) => { qc.clear(); qc.setQueryData(["me"], u); nav(from, { replace: true }); },
     onError: (e: ApiError) => setError("root", { message: e.message }),
   });
-  const field = "min-h-[52px] w-full rounded-[14px] border border-line bg-card px-4 text-base font-medium";
+  const field = "min-h-[52px] w-full rounded-md border border-line bg-card px-4 text-base font-medium";
 
   return (
     <div className="flex min-h-dvh flex-wrap bg-bg">
       <div className="flex min-w-0 flex-[1_1_520px] flex-col justify-center gap-7 px-6 py-10 md:px-16 md:py-12">
         <div className="flex items-center gap-2.5">
-          <span aria-hidden className="grid size-9 place-items-center rounded-[10px] bg-ink text-bg"><Mark size={20} strokeWidth={2.4} /></span>
+          <span aria-hidden className="grid size-9 place-items-center bg-ink text-bg"><Mark size={20} strokeWidth={2.4} /></span>
           <span className="text-xl font-bold tracking-[-0.02em]">Paper</span>
         </div>
         <div>
@@ -52,7 +52,7 @@ export default function Welcome() {
             <p id="pw-hint" className="mt-1.5 text-[13px] text-mute">At least 8 characters.</p>
             {errors.password && <p role="alert" className="mt-1 text-sm text-loss">{errors.password.message}</p>}</div>
           {errors.root && <p role="alert" className="text-sm text-loss">{errors.root.message}</p>}
-          <Button type="submit" className="min-h-[54px] w-full rounded-[14px] text-[17px]" disabled={m.isPending}>{m.isPending ? "One moment…" : mode === "signup" ? "Create account" : "Sign in"}</Button>
+          <Button type="submit" className="min-h-[54px] w-full text-[17px]" disabled={m.isPending}>{m.isPending ? "One moment…" : mode === "signup" ? "Create account" : "Sign in"}</Button>
           {mode === "login" && <p className="m-0 text-sm"><Link to="/forgot-password" className="inline-flex min-h-11 items-center font-semibold text-accent underline">Forgot your password?</Link></p>}
           <p className="m-0 text-sm text-mute">{mode === "signup" ? "Already have an account? " : "New here? "}
             <button type="button" onClick={() => setMode(mode === "signup" ? "login" : "signup")} className="inline-flex min-h-11 items-center font-semibold text-accent underline">
@@ -61,9 +61,9 @@ export default function Welcome() {
         </form>
       </div>
 
-      <div className="grid min-h-[560px] min-w-0 flex-[1_1_520px] place-items-center bg-well p-6 md:p-12">
-        <section aria-label="Example portfolio, for illustration only" className="w-[min(440px,100%)] rounded-[28px] border border-line bg-card p-7">
-          <p className="m-0 text-xs font-semibold uppercase tracking-wide text-mute">Example only</p>
+      <div className="grid min-h-[560px] min-w-0 flex-[1_1_520px] place-items-center bg-well p-6 md:p-12 rounded-md">
+        <section aria-label="Example portfolio, for illustration only" className="w-[min(440px,100%)] border border-line bg-card p-7 rounded-md">
+          <p className="m-0 text-[13px] font-semibold uppercase tracking-wide text-mute">Example only</p>
           <h2 className="m-0 mt-1 text-xl font-bold tracking-[-0.01em]">Your portfolio</h2>
           <p className="mt-2 text-[44px] font-bold leading-none tracking-[-0.035em]">$104,862<span className="cents">40</span></p>
           <p className="mt-2 text-[15px] font-semibold text-gain"><span aria-hidden>▲</span><span className="sr-only">Up </span> $1,284.10 (1.24%) <span className="font-medium text-mute">today</span></p>

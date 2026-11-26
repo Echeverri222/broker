@@ -33,6 +33,8 @@ vi.mock("../lib/api", async (orig) => {
 });
 
 import Settings, { deviceLabel } from "./Settings";
+import { ago } from "./Dashboard";
+import { validateTradeInput } from "../lib/input";
 import { ForgotPassword, ResetPassword, VerifyEmail } from "./Recovery";
 import { Banners } from "../components/Banners";
 
@@ -222,5 +224,29 @@ describe("Adaptive polling [SCL-12]", () => {
     expect(pollInterval(500_000)).toBe(POLL_IDLE);
     window.dispatchEvent(new Event("pointerdown"));
     expect(pollInterval()).toBe(POLL);
+  });
+});
+
+describe("Tester-reported fixes", () => {
+  it("the email banner can be hidden for the session [SES-07]", async () => {
+    sessionStorage.clear();
+    me = { ...me, verified: false };
+    renderAt("/", <Banners />, "/");
+    await userEvent.click(await screen.findByRole("button", { name: "Hide for now" }));
+    expect(screen.queryByText(/Confirm your email/)).toBeNull();
+    sessionStorage.clear();
+  });
+
+  it("says how fresh prices are in plain words [SCL-12]", () => {
+    expect(ago(5)).toBe("just now");
+    expect(ago(150)).toBe("3 min ago");
+    expect(ago(7200)).toBe("2 h ago");
+    expect(ago(172800)).toBe("2 days ago");
+  });
+
+  it("flags letters and minus signs as soon as they are typed, so the summary never shows NaN", () => {
+    expect(validateTradeInput("abc-5", "amount")).toMatch(/digits/);
+    expect(validateTradeInput("-5", "amount")).toMatch(/digits/);
+    expect(validateTradeInput("12.5", "amount")).toBeNull();
   });
 });

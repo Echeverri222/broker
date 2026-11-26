@@ -8,9 +8,9 @@ export const HIT = "relative before:absolute before:-inset-y-1 before:inset-x-0 
 
 export const Skeleton = ({ className = "" }: { className?: string }) => <div className={`skeleton ${className}`} aria-hidden />;
 
-/** DSN-06: 24px radius, 1px line border, no shadow. */
+/** DSN-06: 6px radius, 1px line border, no shadow. */
 export const Card = ({ children, className = "", as: Tag = "section", ...rest }: { children: ReactNode; className?: string; as?: "section" | "div" | "aside" } & React.HTMLAttributes<HTMLElement>) => (
-  <Tag {...rest} className={`rounded-[24px] border border-line bg-card p-5 md:p-6 ${className}`}>{children}</Tag>
+  <Tag {...rest} className={` rounded-md border border-line bg-card p-5 md:p-6 ${className}`}>{children}</Tag>
 );
 
 /** Card title: 18/600 with a muted second part ("Your portfolio · practice money"). */
@@ -20,7 +20,7 @@ export const CardTitle = ({ children, muted, id }: { children: ReactNode; muted?
 
 /** DSN-06: 36px square corner button linking to the detail view of a card (44px hit area). */
 export const CornerLink = ({ to, label }: { to: string; label: string }) => (
-  <Link to={to} aria-label={label} className={`${HIT} grid size-9 shrink-0 place-items-center rounded-[10px] border border-line text-ink hover:bg-well`}>
+  <Link to={to} aria-label={label} className={`${HIT} grid size-9 shrink-0 place-items-center rounded-md border border-line text-ink hover:bg-well`}>
     <ArrowUpRight size={16} strokeWidth={2} aria-hidden />
   </Link>
 );
@@ -28,17 +28,17 @@ export const CornerLink = ({ to, label }: { to: string; label: string }) => (
 type Variant = "primary" | "secondary" | "danger" | "ghost";
 const VARIANTS: Record<Variant, string> = {
   primary: "bg-accent text-accent-ink hover:opacity-90",
-  secondary: "border border-line bg-card hover:bg-well",
+  secondary: "rounded-md border border-line bg-card hover:bg-well",
   danger: "bg-loss text-bg hover:opacity-90",
   ghost: "hover:bg-well",
 };
 export function Button({ variant = "primary", pill = false, className = "", ...p }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; pill?: boolean }) {
-  return <button {...p} className={`inline-flex min-h-11 items-center justify-center gap-2 px-4 text-[15px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${pill ? "rounded-full px-[18px]" : "rounded-xl"} ${VARIANTS[variant]} ${className}`} />;
+  return <button {...p} className={`inline-flex min-h-11 items-center justify-center gap-2 px-4 text-[15px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${pill ? " px-[18px]" : ""} ${VARIANTS[variant]} ${className}`} />;
 }
 
 /** The pill actions under the Home headline (and links styled the same way). */
 export const pillClass = (primary = false) =>
-  `inline-flex min-h-11 items-center gap-2 rounded-full border px-[18px] text-[15px] font-semibold ${primary ? "border-accent bg-accent text-accent-ink" : "border-line bg-card text-ink hover:bg-well"}`;
+  `inline-flex min-h-11 items-center gap-2 rounded-md border px-[18px] text-[15px] font-semibold ${primary ? "border-accent bg-accent text-accent-ink" : "border-line bg-card text-ink hover:bg-well"}`;
 
 /** DSN-05: gain/loss colour only on changes, and always with an arrow. The sign is spoken by screen readers. */
 export function Delta({ value, percent, money, className = "", suffix }: { value?: string | number; percent: string | number; money?: (n: number) => string; className?: string; suffix?: string }) {
@@ -62,11 +62,11 @@ export function Delta({ value, percent, money, className = "", suffix }: { value
 export function Logo({ symbol, logoUrl, size = 44 }: { symbol: string; logoUrl?: string | null; size?: number }) {
   const [broken, setBroken] = useState(false);
   const box = { width: size, height: size };
-  if (logoUrl && !broken) return <img src={logoUrl} alt="" onError={() => setBroken(true)} style={box} className="shrink-0 rounded-full bg-logo object-contain" />;
+  if (logoUrl && !broken) return <img src={logoUrl} alt="" onError={() => setBroken(true)} style={box} className="shrink-0 bg-logo rounded-full object-contain" />;
   const text = symbol.replace(/[^A-Z0-9]/gi, "").slice(0, symbol.length > 3 ? 4 : 3).toUpperCase();
   return (
     <span aria-hidden style={{ ...box, fontSize: Math.round(size * (text.length > 3 ? 0.26 : 0.3)) }}
-      className="grid shrink-0 place-items-center rounded-full bg-logo font-bold tracking-tight text-ink">
+      className="grid shrink-0 place-items-center bg-logo rounded-full font-bold tracking-tight text-ink">
       {text}
     </span>
   );
@@ -91,13 +91,13 @@ export function Segmented<T extends string>({ options, value, onChange, label, r
   options: readonly Option<T>[]; value: T | null; onChange: (v: T) => void; label: string; role?: "tab" | "radio"; fill?: boolean; large?: boolean;
 }) {
   return (
-    <div role={role === "tab" ? "tablist" : "radiogroup"} aria-label={label} className={`flex gap-0.5 rounded-xl bg-well p-[3px] ${fill ? "w-full" : "w-fit"}`}>
+    <div role={role === "tab" ? "tablist" : "radiogroup"} aria-label={label} className={`flex gap-0.5 bg-well p-[3px] ${fill ? "w-full" : "w-fit"}`}>
       {options.map((o) => {
         const on = o.value === value;
         return (
           <button key={o.value} type="button" role={role} {...(role === "tab" ? { "aria-selected": on } : { "aria-checked": on })} disabled={o.disabled} title={o.title}
             onClick={() => onChange(o.value)}
-            className={`${HIT} rounded-[9px] px-3 text-[13px] font-semibold disabled:opacity-40 ${large ? "min-h-11 text-[15px]" : "min-h-9"} ${fill ? "flex-1" : ""} ${on ? "bg-card text-ink shadow-[0_1px_2px_rgb(0_0_0/0.12)]" : "text-mute hover:text-ink"}`}>
+            className={`${HIT} px-3 text-[13px] font-semibold disabled:opacity-40 ${large ? "min-h-11 text-[15px]" : "min-h-9"} ${fill ? "flex-1" : ""} ${on ? "bg-card text-ink shadow-[0_1px_2px_rgb(0_0_0/0.12)]" : "text-mute hover:text-ink"}`}>
             {o.label}
           </button>
         );
@@ -110,7 +110,7 @@ export function Segmented<T extends string>({ options, value, onChange, label, r
 export function Toggle({ on, onClick, dot, children, disabled }: { on: boolean; onClick: () => void; dot?: string; children: ReactNode; disabled?: boolean }) {
   return (
     <button type="button" aria-pressed={on} onClick={onClick} disabled={disabled}
-      className={`${HIT} inline-flex min-h-9 items-center gap-2 rounded-full border bg-card px-3 text-[13px] font-semibold disabled:opacity-40 ${on ? "border-ink text-ink" : "border-line text-mute hover:text-ink"}`}>
+      className={`${HIT} inline-flex min-h-9 items-center gap-2 rounded-md border bg-card px-3 text-[13px] font-semibold disabled:opacity-40 ${on ? "border-ink text-ink" : "border-line text-mute hover:text-ink"}`}>
       <i aria-hidden className="inline-block size-[9px] rounded-full" style={{ background: on && dot ? dot : "var(--line)" }} />
       {children}
     </button>
@@ -121,9 +121,9 @@ export function Toggle({ on, onClick, dot, children, disabled }: { on: boolean; 
 export function FilterChip({ on, onClick, children, count, role }: { on: boolean; onClick: () => void; children: ReactNode; count?: number; role?: "radio" }) {
   return (
     <button type="button" onClick={onClick} {...(role === "radio" ? { role, "aria-checked": on } : { "aria-pressed": on })}
-      className={`${HIT} inline-flex min-h-10 items-center gap-2 rounded-full border px-3.5 text-sm font-semibold ${on ? "border-ink bg-ink text-bg" : "border-line bg-card text-ink hover:bg-well"}`}>
+      className={`${HIT} inline-flex min-h-10 items-center gap-2 rounded-md border px-3.5 text-sm font-semibold ${on ? "border-ink bg-ink text-bg" : "border-line bg-card text-ink hover:bg-well"}`}>
       {children}
-      {count !== undefined && <small className={`text-xs font-semibold ${on ? "opacity-75" : "text-mute"}`}>{count}</small>}
+      {count !== undefined && <small className={`text-[13px] font-semibold ${on ? "opacity-75" : "text-mute"}`}>{count}</small>}
     </button>
   );
 }
@@ -132,14 +132,14 @@ export function FilterChip({ on, onClick, children, count, role }: { on: boolean
 export function RangeBar({ position, label }: { position: number | null; label: string }) {
   const pos = position === null ? null : Math.min(1, Math.max(0, position));
   return (
-    <div role="img" aria-label={pos === null ? `${label}: not available` : `${label}: ${Math.round(pos * 100)}% of the way from low to high`} className="relative h-1.5 rounded-full bg-well">
-      {pos !== null && <b className="absolute -top-1 size-3.5 -translate-x-1/2 rounded-full border-[3px] border-card bg-ink" style={{ left: `${pos * 100}%` }} />}
+    <div role="img" aria-label={pos === null ? `${label}: not available` : `${label}: ${Math.round(pos * 100)}% of the way from low to high`} title={pos === null ? undefined : `${Math.round(pos * 100)}% of the way from the low to the high`} className="relative h-1.5 bg-line">
+      {pos !== null && <b className="absolute -top-1 size-3.5 -translate-x-1/2 border-[3px] border-card bg-ink rounded-full" style={{ left: `${pos * 100}%` }} />}
     </div>
   );
 }
 
 export const ErrorBox = ({ message, onRetry }: { message: string; onRetry?: () => void }) => (
-  <div role="alert" className="rounded-2xl border border-line bg-card p-4 text-sm">
+  <div role="alert" className=" border border-line bg-card p-4 text-sm rounded-md">
     <p className="font-medium">{message}</p>
     {onRetry && <button onClick={onRetry} className={`${HIT} mt-2 inline-flex min-h-9 items-center font-semibold text-accent underline`}>Try again</button>}
   </div>

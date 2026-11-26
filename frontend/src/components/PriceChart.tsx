@@ -78,8 +78,8 @@ export function PriceChart({ bars, type, range, interval, label, height = 360, v
       layout: { background: { type: ColorType.Solid, color: "transparent" }, textColor: c.mute, fontFamily: "Inter, system-ui, sans-serif", fontSize: 12, attributionLogo: false,
                 panes: { separatorColor: c.line, separatorHoverColor: c.line, enableResize: false } },
       grid: { vertLines: { visible: false }, horzLines: { color: c.line, style: LineStyle.LargeDashed } },
-      rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.08, bottom: 0.06 } },
-      timeScale: { borderVisible: false, timeVisible: interval === "5m" || interval === "1h", rightOffset: 2, tickMarkFormatter: (t: Time, tt: number) => tickLabel(t as number, tt, range) },
+      rightPriceScale: { borderVisible: false, minimumWidth: 64, scaleMargins: { top: 0.08, bottom: 0.06 } },
+      timeScale: { borderVisible: false, timeVisible: interval === "5m" || interval === "1h", rightOffset: 2, tickMarkFormatter: (() => { let prev = ""; let prevT = -Infinity; return (t: Time, tt: number) => { const l = tickLabel(t as number, tt, range); const dup = l === prev && (t as number) >= prevT; prev = l; prevT = t as number; return dup ? null : l; }; })() },
       crosshair: { mode: CrosshairMode.Normal, vertLine: { style: LineStyle.Dotted, color: c.mute, width: 1, labelVisible: false }, horzLine: { style: LineStyle.Dotted, color: c.mute, width: 1 } },
       localization: percent ? { priceFormatter: (p: number) => signedPct(p - 100) } : undefined,
       handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: false }, handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: false, vertTouchDrag: false },
@@ -187,10 +187,10 @@ export function PriceChart({ bars, type, range, interval, label, height = 360, v
   return (
     <div className="relative">
       <div ref={host} role="application" aria-roledescription="interactive chart" aria-label={label} aria-describedby={hint} tabIndex={0}
-        onKeyDown={onKeyDown} onBlur={onBlur} style={{ height }} className="w-full rounded-lg" data-testid="price-chart" />
+        onKeyDown={onKeyDown} onBlur={onBlur} style={{ height }} className="w-full" data-testid="price-chart" />
       <p id={hint} className="sr-only">Use the left and right arrow keys to move between points, and Home or End to jump to the first or last.</p>
       {tip && (
-        <div data-testid="chart-tooltip" className="pointer-events-none absolute top-2 z-10 rounded-xl border border-line bg-card p-3 text-xs shadow-none" style={{ left, width: cardW }}>
+        <div data-testid="chart-tooltip" className="pointer-events-none absolute top-2 z-10 border border-line bg-card p-3 text-[13px] shadow-none rounded-md" style={{ left, width: cardW }}>
           <p className="font-semibold text-ink">{tip.title}</p>
           <dl className="mt-1.5 space-y-1">
             {tip.rows.map((r) => (

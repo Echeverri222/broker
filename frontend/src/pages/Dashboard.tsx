@@ -20,13 +20,30 @@ export const greeting = (hour: number) => (hour < 12 ? "Good morning" : hour < 1
 const weekday = (iso: string) => new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "long" }).format(new Date(iso));
 const clock = (iso: string) => new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" }).format(new Date(iso));
 
+/** Carmen: say how fresh the numbers are. */
+export function ago(seconds: number): string {
+  if (seconds < 60) return "just now";
+  if (seconds < 3600) return `${Math.round(seconds / 60)} min ago`;
+  if (seconds < 86400) return `${Math.round(seconds / 3600)} h ago`;
+  return `${Math.round(seconds / 86400)} days ago`;
+}
+function Freshness() {
+  const { data } = useQuery({ queryKey: ["status"], queryFn: api.status, refetchInterval: () => pollInterval() });
+  const s = data?.quotes_updated_seconds_ago;
+  if (s === null || s === undefined) return null;
+  return <p className="m-0 mb-5 mt-2 text-sm text-mute">Prices updated {ago(s)}{data?.market_open ? "" : " (the stock market is closed; crypto updates all day)"}.</p>;
+}
+
 function Headline({ name }: { name: string }) {
   const market = useMarket().data;
   const status = !market ? "" : market.open && market.next_close ? `Markets close at ${clock(market.next_close)}.` : market.next_open ? `Markets open ${weekday(market.next_open)} at ${clock(market.next_open).replace(/ ?(AM|PM)$/, "")}.` : "Markets are closed.";
   return (
-    <h1 className="m-0 text-[32px] font-semibold leading-[1.15] tracking-[-0.025em] md:text-[40px]">
+    <>
+    <h1 className="m-0 mb-2 text-[32px] font-semibold leading-[1.15] tracking-[-0.025em] md:text-[40px]">
       {greeting(new Date().getHours())}, {name}. <span className="font-medium text-mute">{status}</span>
     </h1>
+      <Freshness />
+    </>
   );
 }
 
@@ -39,9 +56,9 @@ function MarketsStrip() {
     <ul aria-label="Markets today" className="flex flex-wrap gap-3">
       {items.map((m: MarketOverviewItem) => (
         <li key={m.symbol} title={m.proxy_for ? `Tracked with the ${m.proxy_for} fund` : undefined}
-          className="flex min-h-11 items-center gap-3 rounded-full border border-line bg-card px-4 text-sm">
+          className="flex min-h-11 items-center gap-3 border border-line bg-card px-4 text-sm rounded-md">
           <span className="font-semibold">{m.label}</span>
-          <span className="num rounded-full bg-well px-2.5 py-0.5 font-semibold">{Number(m.price).toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>
+          <span className="num bg-well px-2.5 py-0.5 font-semibold">{Number(m.price).toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>
           {m.change_percent !== null && <Delta percent={m.change_percent} className="text-[13px]" />}
         </li>
       ))}
@@ -75,7 +92,7 @@ function PortfolioCard({ p }: { p: Portfolio }) {
         <span><span className="text-mute" title="Change since the previous market close">Today </span><Delta value={p.day_change} percent={p.day_change_percent} /></span>
         <span><span className="text-mute" title="Gain or loss compared with what you put in. Cash you add is not counted as profit.">All time </span><Delta value={p.total_return} percent={p.total_return_percent} /></span>
       </div>
-      {p.incomplete && <p role="status" className="mt-3 rounded-xl border border-line bg-well p-3 text-sm">Some prices are unavailable right now, so the total excludes those positions.</p>}
+      {p.incomplete && <p role="status" className="mt-3 border border-line bg-well p-3 text-sm rounded-md">Some prices are unavailable right now, so the total excludes those positions.</p>}
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <Segmented label="Range" options={RANGES.map((r) => ({ value: r, label: r }))} value={range} onChange={setRange} />
         <Segmented label="Chart type" options={[{ value: "line", label: "Line" }, { value: "area", label: "Area" }]} value={type} onChange={(t) => setType(t as ChartType)} />
@@ -85,7 +102,7 @@ function PortfolioCard({ p }: { p: Portfolio }) {
           : bars.length === 0 ? <p className="grid h-[280px] place-items-center text-sm text-mute">No history yet. It builds up as prices are recorded.</p>
           : <PriceChart bars={bars} type={type} range={range} interval="1d" height={280} label={`Portfolio value, ${range}`} compare={bench.length ? { label: "S&P 500", points: bench, mode: "overlay" } : null} />}
       </div>
-      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-mute">
+      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-[13px] text-mute">
         <span className="inline-flex items-center gap-2"><i aria-hidden className="inline-block h-0.5 w-5 bg-[var(--chart)]" />Your portfolio</span>
         {bench.length > 0 && <span className="inline-flex items-center gap-2"><i aria-hidden className="inline-block w-5 border-t-2 border-dashed border-[var(--bench)]" />S&amp;P 500</span>}
         {lead && <span className="font-semibold text-ink">{lead}</span>}
@@ -99,16 +116,16 @@ function PortfolioCard({ p }: { p: Portfolio }) {
 function AccountsCard({ p }: { p: Portfolio }) {
   const reserved = Number(p.reserved_cash), cash = Math.max(0, Number(p.cash) - reserved), invested = Number(p.invested_value);
   const total = cash + reserved + invested || 1;
-  const rows: [string, number, string][] = [["Cash to spend", cash, "var(--bar)"], ["Set aside for orders", reserved, "var(--amber)"], ["Invested", invested, "var(--chart)"]];
+  const rows: [string, number, string][] = [["Cash to spend", cash, "var(--bar)"], ["Held for waiting orders", reserved, "var(--amber)"], ["Invested", invested, "var(--chart)"]];
   return (
     <Card aria-labelledby="accounts-title">
       <div className="flex items-start justify-between"><CardTitle id="accounts-title">Accounts</CardTitle><CornerLink to="/activity" label="Open activity" /></div>
-      <div role="img" aria-label={`Cash ${Math.round((cash / total) * 100)}%, set aside ${Math.round((reserved / total) * 100)}%, invested ${Math.round((invested / total) * 100)}%`} className="mt-4 flex h-2.5 gap-0.5 overflow-hidden rounded-full bg-well">
+      <div role="img" aria-label={`Cash ${Math.round((cash / total) * 100)}%, set aside ${Math.round((reserved / total) * 100)}%, invested ${Math.round((invested / total) * 100)}%`} className="mt-4 flex h-2.5 gap-0.5 overflow-hidden bg-well">
         {rows.map(([k, v, c]) => v > 0 && <span key={k} style={{ width: `${(v / total) * 100}%`, background: c }} />)}
       </div>
       <dl className="mt-4 space-y-3 text-sm">
         {rows.map(([k, v, c]) => (
-          <div key={k} className="flex items-center justify-between"><dt className="flex items-center gap-2 text-mute"><i aria-hidden className="inline-block size-2.5 rounded-full" style={{ background: c }} />{k}</dt><dd className="font-semibold"><Money value={v} /></dd></div>
+          <div key={k} className="flex items-center justify-between"><dt className="flex items-center gap-2 text-mute"><i aria-hidden className="inline-block size-2.5" style={{ background: c }} />{k}</dt><dd className="font-semibold"><Money value={v} /></dd></div>
         ))}
       </dl>
     </Card>
@@ -125,7 +142,7 @@ function WaitingOrders() {
   const o = list[0];
   const what = o.sell_all ? `all of ${o.symbol}` : o.amount ? `${money(o.amount)} of ${o.symbol}` : `${qty(o.requested_quantity ?? "0")} ${o.symbol}`;
   return (
-    <section aria-labelledby="waiting-title" className="rounded-[24px] border border-[var(--amber)] bg-amber-bg p-5 text-amber-ink">
+    <section aria-labelledby="waiting-title" className=" border border-[var(--amber)] bg-amber-bg p-5 text-amber-ink rounded-md">
       <h2 id="waiting-title" className="m-0 text-[18px] font-semibold">{list.length === 1 ? "1 order waiting" : `${list.length} orders waiting`}</h2>
       <p className="mt-1 text-sm">{o.side === "buy" ? "Buy" : "Sell"} {what}{list.length > 1 ? ` and ${list.length - 1} more` : ""}. Placed when the market opens.</p>
       <Button variant="secondary" className="mt-3 border-[var(--amber)] bg-transparent text-amber-ink" disabled={cancel.isPending} aria-label={`Cancel ${o.side} order for ${o.symbol}`} onClick={() => cancel.mutate(o.id)}>Cancel</Button>
@@ -149,11 +166,11 @@ function Holdings({ p, onBuy }: { p: Portfolio; onBuy: () => void }) {
               <li key={pos.symbol} className="lift">
                 <Link to={`/assets/${pos.symbol}`} className="flex min-h-[68px] items-center gap-3 py-2">
                   <Logo symbol={pos.symbol} logoUrl={s?.logo_url} size={44} />
-                  <div className="min-w-0 flex-1"><p className="truncate font-semibold">{pos.name}</p><p className="truncate text-xs text-mute">{qty(pos.quantity)} {pos.symbol}</p></div>
+                  <div className="min-w-0 flex-1"><p className="truncate font-semibold">{pos.name}</p><p className="truncate text-[13px] text-mute">{qty(pos.quantity)} {pos.symbol}</p></div>
                   <Sparkline data={s?.spark} width={84} height={28} />
                   <div className="w-[104px] text-right">
                     <p className="font-semibold">{pos.market_value ? <Money value={pos.market_value} /> : "Price unavailable"}</p>
-                    {pos.market_value && <Delta percent={pos.day_change_percent} className="text-xs" />}
+                    {pos.market_value && <Delta percent={pos.day_change_percent} className="text-[13px]" />}
                   </div>
                 </Link>
               </li>
@@ -186,7 +203,7 @@ export function Checklist({ userId }: { userId?: number }) {
       <div className="flex items-start justify-between">
         <CardTitle id="checklist-title" muted={`${done} of ${steps.length}`}>Get started</CardTitle>
         <button type="button" aria-label="Dismiss checklist" onClick={() => { try { localStorage.setItem(dismissKey(userId), "1"); } catch { /* optional */ } setDismissed(true); }}
-          className={`${HIT} grid size-9 place-items-center rounded-[10px] border border-line hover:bg-well`}><X size={16} aria-hidden /></button>
+          className={`${HIT} grid size-9 place-items-center rounded-md border border-line hover:bg-well`}><X size={16} aria-hidden /></button>
       </div>
       <ol className="mt-3 space-y-3">
         {steps.map(([title, ok, hint]) => (
@@ -210,8 +227,8 @@ function WatchCard() {
           {watch.data.assets.map((a) => (
             <li key={a.symbol} className="lift"><Link to={`/assets/${a.symbol}`} className="flex min-h-14 items-center gap-3 py-2">
               <Logo symbol={a.symbol} logoUrl={a.logo_url} size={36} />
-              <div className="min-w-0 flex-1"><p className="truncate font-semibold">{a.name}</p><p className="text-xs text-mute">{a.symbol}</p></div>
-              <div className="text-right"><p className="font-semibold">{a.quote ? <Money value={a.quote.price} asPrice /> : dash}</p>{a.quote && <Delta percent={a.quote.change_percent} className="text-xs" />}</div>
+              <div className="min-w-0 flex-1"><p className="truncate font-semibold">{a.name}</p><p className="text-[13px] text-mute">{a.symbol}</p></div>
+              <div className="text-right"><p className="font-semibold">{a.quote ? <Money value={a.quote.price} asPrice /> : dash}</p>{a.quote && <Delta percent={a.quote.change_percent} className="text-[13px]" />}</div>
             </Link></li>
           ))}
         </ul>

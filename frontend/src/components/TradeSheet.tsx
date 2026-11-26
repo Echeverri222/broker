@@ -38,7 +38,9 @@ export function TradeSheet({ asset, initialSide, onClose, inline = false }: { as
 
   const px = Number(asset.quote?.price ?? 0);
   const cash = Number(pf?.cash ?? 0) - Number(pf?.reserved_cash ?? 0); // QUE-04: reserved cash is not spendable
-  const value = Number(watch("value") || 0);
+  const rawValue = String(watch("value") ?? "");
+  const liveError = rawValue.trim() && !sellAll ? validateTradeInput(rawValue, mode) : null;
+  const value = liveError ? 0 : Number(rawValue || 0) || 0;
   const est = useMemo(() => (mode === "amount" ? { total: value, quantity: px ? value / px : 0 } : { total: value * px, quantity: value }), [mode, value, px]);
 
   useEffect(() => { if (!inline) ref.current?.querySelector<HTMLInputElement>("input[name=value]")?.focus(); }, [step === "edit"]);
@@ -74,16 +76,16 @@ export function TradeSheet({ asset, initialSide, onClose, inline = false }: { as
   const available = side === "buy" ? `${money(cash)} cash available` : `${qty(asset.position?.quantity ?? "0")} ${asset.symbol} held`;
 
   const wrap = (children: React.ReactNode) => inline ? (
-    <div ref={ref} role="region" aria-label={`Trade ${asset.symbol}`} className="rounded-[24px] border border-line bg-card p-5">{children}</div>
+    <div ref={ref} role="region" aria-label={`Trade ${asset.symbol}`} className=" border border-line bg-card p-5 rounded-md">{children}</div>
   ) : (
     <div className="fixed inset-0 z-50 flex items-end bg-scrim md:items-stretch md:justify-end" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div ref={ref} role="dialog" aria-modal="true" aria-label={`Trade ${asset.symbol}`}
-        className="sheet w-full rounded-t-3xl bg-card p-5 md:w-[400px] md:rounded-none md:border-l md:border-line">{children}</div>
+        className="sheet min-h-[78dvh] max-h-[92dvh] w-full overflow-y-auto rounded-t-md bg-card p-5 md:min-h-0 md:max-h-none md:w-[400px] md:rounded-none md:border-l md:border-line">{children}</div>
       {depositing && <DepositSheet onClose={() => { setDepositing(false); setError(null); }} />}
     </div>
   );
   const day = openDay(market.data?.next_open);
-  const primary = queued ? `Queue ${side}${day ? ` for ${day}` : ""}` : side === "buy" ? "Buy" : "Sell";
+  const primary = queued ? `${side === "buy" ? "Buy" : "Sell"} at the open${day ? ` on ${day}` : ""}` : side === "buy" ? "Buy" : "Sell";
 
   return wrap(
     <>
@@ -92,36 +94,36 @@ export function TradeSheet({ asset, initialSide, onClose, inline = false }: { as
             <h2 className="text-lg font-bold">{step === "receipt" ? (receipt?.order.status === "pending" ? "Order queued" : "Order filled") : `${side === "buy" ? "Buy" : "Sell"} ${asset.symbol}`}</h2>
             <p className="text-sm text-mute">{asset.name} · {asset.quote ? price(asset.quote.price) : "no price"}</p>
           </div>
-          {!inline && <button onClick={onClose} aria-label="Close" className="grid size-11 place-items-center rounded-xl text-xl hover:bg-well">×</button>}
+          {!inline && <button onClick={onClose} aria-label="Close" className="grid size-11 place-items-center text-xl hover:bg-well">×</button>}
         </div>
 
         {step === "receipt" && receipt?.order.status === "pending" ? (
           <div aria-live="polite">
-            <dl className="divide-y divide-line rounded-xl border border-line text-sm">
+            <dl className="divide-y divide-line border border-line text-sm rounded-md">
               {[["Side", receipt.order.side === "buy" ? "Buy (waiting)" : "Sell (waiting)"],
                 ["Order", receipt.order.sell_all ? `All ${asset.symbol}` : receipt.order.amount ? money(receipt.order.amount) : `${qty(receipt.order.requested_quantity ?? "0")} ${asset.symbol}`],
                 ["Will be placed", market.data?.next_open ? formatOpen(market.data.next_open).replace("Market opens ", "").replace(/ \(in .*\)/, "") : "At the next market open"],
-                ...(Number(receipt.order.reserved_cash) > 0 ? [["Cash set aside", money(receipt.order.reserved_cash)]] : [])].map(([k, v]) => (
+                ...(Number(receipt.order.reserved_cash) > 0 ? [["Cash held for this order", money(receipt.order.reserved_cash)]] : [])].map(([k, v]) => (
                 <div key={k} className="flex justify-between px-3 py-2.5"><dt className="text-mute">{k}</dt><dd className="font-semibold">{v}</dd></div>
               ))}
             </dl>
-            <p className="mt-2 text-xs text-mute">Nothing has been bought or sold yet. It fills at the first price after the market opens, and you can cancel it in Activity until then. Virtual money.</p>
+            <p className="mt-2 text-[13px] text-mute">Nothing has been bought or sold yet. It fills at the first price after the market opens, and you can cancel it in Activity until then. Virtual money.</p>
             <div className="mt-4 grid grid-cols-2 gap-2">
               <Button variant="secondary" onClick={onClose}>Done</Button>
-              <Link to="/activity" onClick={onClose} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-accent text-sm font-semibold text-accent-ink">View in Activity</Link>
+              <Link to="/activity" onClick={onClose} className="inline-flex min-h-11 items-center justify-center bg-accent text-sm font-semibold text-accent-ink rounded-md">View in Activity</Link>
             </div>
           </div>
         ) : step === "receipt" && receipt ? (
           <div aria-live="polite">
-            <dl className="divide-y divide-line rounded-xl border border-line text-sm">
+            <dl className="divide-y divide-line border border-line text-sm rounded-md">
               {[["Side", receipt.order.side === "buy" ? "Bought" : "Sold"], ["Quantity", `${qty(receipt.order.quantity ?? "0")} ${receipt.order.symbol}`], ["Price", price(receipt.order.price ?? "0")], ["Total", money(receipt.order.total ?? "0")], ...(receipt.order.realized_pnl ? [["Realized P&L", money(receipt.order.realized_pnl)]] : []), ["New cash balance", money(receipt.cash)]].map(([k, v]) => (
                 <div key={k} className="flex justify-between px-3 py-2.5"><dt className="text-mute">{k}</dt><dd className="font-semibold">{v}</dd></div>
               ))}
             </dl>
-            <p className="mt-2 text-xs text-mute">Simulated fill at last price. Virtual money.</p>
+            <p className="mt-2 text-[13px] text-mute">Simulated fill at last price. Virtual money.</p>
             <div className="mt-4 grid grid-cols-2 gap-2">
               <Button variant="secondary" onClick={onClose}>Done</Button>
-              <Link to="/" onClick={onClose} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-accent text-sm font-semibold text-accent-ink">View position</Link>
+              <Link to="/" onClick={onClose} className="inline-flex min-h-11 items-center justify-center bg-accent text-sm font-semibold text-accent-ink rounded-md">View position</Link>
             </div>
           </div>
         ) : (
@@ -131,38 +133,38 @@ export function TradeSheet({ asset, initialSide, onClose, inline = false }: { as
             if (msg) return setFieldError("value", { message: msg });
             setStep("review");
           })} noValidate>
-            <div role="tablist" aria-label="Order side" className="mb-4 grid grid-cols-2 rounded-xl border border-line p-0.5">
+            <div role="tablist" aria-label="Order side" className="mb-4 grid grid-cols-2 border border-line p-0.5 rounded-md">
               {(["buy", "sell"] as const).map((s) => (
                 <button type="button" key={s} role="tab" aria-selected={side === s} disabled={step === "review"} onClick={() => { setSide(s); setError(null); }}
-                  className={`min-h-10 rounded-[10px] text-sm font-semibold capitalize ${side === s ? "bg-accent text-accent-ink" : "text-mute"}`}>{s}</button>
+                  className={`min-h-10 text-sm font-semibold capitalize ${side === s ? "bg-accent text-accent-ink" : "text-mute"}`}>{s}</button>
               ))}
             </div>
 
             <div className="mb-1 flex items-center justify-between text-sm font-medium">
               <label htmlFor="trade-value">{mode === "amount" ? "Amount (USD)" : `Quantity (${asset.symbol})`}</label>
-              <button type="button" onClick={switchMode} disabled={step === "review"} className="text-xs font-semibold text-accent underline">
+              <button type="button" onClick={switchMode} disabled={step === "review"} className="text-[13px] font-semibold text-accent underline">
                 Switch to {mode === "amount" ? "quantity" : "dollars"}
               </button>
             </div>
             <div className="flex gap-2">
               <input id="trade-value" inputMode="decimal" autoComplete="off" placeholder={mode === "amount" ? "0.00" : "0"} readOnly={step === "review"}
                 aria-invalid={!!errors.value || !!error} aria-describedby="trade-help"
-                className="min-h-12 w-full rounded-xl border border-line bg-well px-3 text-xl font-semibold" {...register("value", { setValueAs: cleanNumber, onChange: () => setSellAll(false) })} />
+                className="min-h-12 w-full border border-line bg-well px-3 text-xl font-semibold rounded-md" {...register("value", { setValueAs: cleanNumber, onChange: () => setSellAll(false) })} />
               <Button type="button" variant="secondary" onClick={setMax} disabled={step === "review"}>Max</Button>
             </div>
-            <p id="trade-help" className="mt-1.5 text-xs text-mute">{available}</p>
-            {errors.value && <p role="alert" className="mt-1 text-sm text-loss">{errors.value.message}</p>}
+            <p id="trade-help" className="mt-1.5 text-[13px] text-mute">{available}</p>
+            {(errors.value?.message ?? liveError) && <p role="alert" className="mt-1 text-sm text-loss">{errors.value?.message ?? liveError}</p>}
             {side === "buy" && step === "edit" && (
               <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Quick amounts">
                 {["100", "500", "1000"].map((v) => (
-                  <button key={v} type="button" onClick={() => chip(v)} className={`${HIT} min-h-9 rounded-full border border-line px-3 text-[13px] font-semibold hover:bg-well`}>{money(v).replace(".00", "")}</button>
+                  <button key={v} type="button" onClick={() => chip(v)} className={`${HIT} min-h-9 rounded-md border border-line px-3 text-[13px] font-semibold hover:bg-well`}>{money(v).replace(".00", "")}</button>
                 ))}
-                <button type="button" onClick={() => chip(Math.max(0, cash).toFixed(2))} className={`${HIT} min-h-9 rounded-full border border-line px-3 text-[13px] font-semibold hover:bg-well`}>All cash</button>
+                <button type="button" onClick={() => chip(Math.max(0, cash).toFixed(2))} className={`${HIT} min-h-9 rounded-md border border-line px-3 text-[13px] font-semibold hover:bg-well`}>All cash</button>
               </div>
             )}
 
             {error && (
-              <div role="alert" className="mt-3 rounded-xl border border-line p-3 text-sm">
+              <div role="alert" className="mt-3 border border-line p-3 text-sm rounded-md">
                 <p className="font-medium text-loss">{error.message}</p>
                 {error.code === "insufficient_funds" && error.details.max_amount && Number(error.details.max_amount) >= 1 && (
                   <button type="button" onClick={() => useSuggested(error.details.max_amount)} className="mt-1 font-semibold text-accent underline">
@@ -180,22 +182,22 @@ export function TradeSheet({ asset, initialSide, onClose, inline = false }: { as
               </div>
             )}
 
-            <dl className="mt-4 space-y-1.5 rounded-xl bg-well p-3 text-sm">
+            <dl className="mt-4 space-y-1.5 bg-well p-3 text-sm">
               <div className="flex justify-between"><dt className="text-mute">You'll get about</dt><dd>{sellAll ? qty(asset.position?.quantity ?? "0") : qty(est.quantity.toFixed(8))} {asset.symbol}</dd></div>
               <div className="flex justify-between"><dt className="text-mute">Estimated total</dt><dd className="font-semibold">{money(est.total)}</dd></div>
-              {side === "buy" && queued && <div className="flex justify-between"><dt className="text-mute">Cash set aside</dt><dd>{money(est.total)}</dd></div>}
+              {side === "buy" && queued && <div className="flex justify-between"><dt className="text-mute">Cash held for this order</dt><dd>{money(est.total)}</dd></div>}
               <div className="flex justify-between"><dt className="text-mute">Fees</dt><dd>$0.00</dd></div>
             </dl>
 
             {step === "review" ? (
               <div className="mt-4 grid grid-cols-[1fr_2fr] gap-2">
                 <Button type="button" variant="secondary" onClick={() => setStep("edit")} disabled={place.isPending}>Edit</Button>
-                <Button type="submit" disabled={place.isPending}>{place.isPending ? "Placing…" : queued ? `Queue ${side}` : `Confirm ${side}`}</Button>
+                <Button type="submit" disabled={place.isPending}>{place.isPending ? "Placing…" : queued ? `${side === "buy" ? "Buy" : "Sell"} at the open` : `Confirm ${side}`}</Button>
               </div>
             ) : (
               <Button type="submit" className="mt-4 w-full">{primary}</Button>
             )}
-            <p className="mt-3 text-center text-xs text-mute">
+            <p className="mt-3 text-center text-[13px] text-mute">
               {queued
                 ? `The market is closed, so this order will be queued${market.data?.next_open ? ` and placed at the open (${formatOpen(market.data.next_open).replace("Market opens ", "").replace(/ \(in .*\)/, "")})` : ""}. It fills at the first price after the open, which may differ from the one shown. Buys set cash aside until then. Virtual money.`
                 : "Market order: fills right away at the latest price, which may differ slightly from the one shown. Virtual money."}

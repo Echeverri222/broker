@@ -36,7 +36,7 @@ function KeyNumbers({ a }: { a: AssetDetail }) {
         <div key={label} className="mt-4">
           <p className="mb-2 text-sm text-mute">{label}</p>
           <RangeBar position={pos(lo, hi)} label={label} />
-          <div className="num mt-1.5 flex justify-between text-xs font-semibold"><span>{priceOrDash(lo)}</span><span>{priceOrDash(hi)}</span></div>
+          <div className="num mt-1.5 flex justify-between text-[13px] font-semibold"><span>{priceOrDash(lo)}</span><span>{priceOrDash(hi)}</span></div>
         </div>
       ))}
     </Card>
@@ -122,7 +122,7 @@ export default function AssetPage() {
     ? <Card><p role="status" className="text-sm font-medium">{blockedReason}</p></Card>
     : (
       <div className="space-y-3">
-        {queueNote && <p role="status" className="rounded-2xl border border-line bg-card p-3 text-sm"><span className="font-semibold">Market closed.</span> {queueNote}</p>}
+        {queueNote && <p role="status" className=" border border-line bg-card p-3 text-sm rounded-md"><span className="font-semibold">Market closed.</span> {queueNote}</p>}
         {desktop && <TradeSheet key={`${panel.n}-${a.symbol}`} inline asset={a} initialSide={panel.side} onClose={() => setPanel((p) => ({ ...p, n: p.n + 1 }))} />}
       </div>
     );
@@ -152,9 +152,9 @@ export default function AssetPage() {
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
                   {a.quote && <span><Delta value={a.quote.change} percent={a.quote.change_percent} money={price} suffix="today" /></span>}
                   {summary && range !== "1D" && <span data-testid="range-summary"><Delta value={summary.change} percent={summary.percent} money={price} suffix={RANGE_PHRASE[range]} /></span>}
-                  {a.quote && (a.quote.stale || age > 2) && (crypto || market.data?.open) && <span className="rounded-full border border-line px-2 py-0.5 text-xs text-mute">Delayed · updated {ago(a.quote.as_of)}</span>}
+                  {a.quote && (a.quote.stale || age > 2) && (crypto || market.data?.open) && <span className=" border border-line px-2 py-0.5 text-[13px] text-mute rounded-md">Delayed · updated {ago(a.quote.as_of)}</span>}
                 </div>
-                <p className="mt-1 text-xs text-mute">{crypto ? "Crypto trades 24/7" : market.data?.open ? "US market open" : "US market closed"}</p>
+                <p className="mt-1 text-[13px] text-mute">{crypto ? "Crypto trades 24/7" : market.data?.open ? "US market open" : "US market closed"}</p>
               </div>
             </div>
 
@@ -182,9 +182,9 @@ export default function AssetPage() {
               <Toggle on={s10} onClick={() => setS10(!s10)} dot="var(--sma1)" disabled={bars.length < 10}>SMA 10</Toggle>
               <Toggle on={s20} onClick={() => setS20(!s20)} dot="var(--sma2)" disabled={bars.length < 20}>SMA 20</Toggle>
               {cmp ? <Toggle on onClick={() => setCmp(null)} dot="var(--bar2)">vs {cmp} ✕</Toggle> : <Toggle on={false} onClick={() => setPicking(true)}>Compare</Toggle>}
-              {fills.length > 0 && <span className="text-xs text-mute">Arrows mark your trades</span>}
+              {fills.length > 0 && <span className="text-[13px] text-mute">Arrows mark your trades</span>}
             </div>
-            {cmp && <p className="mt-2 text-xs text-mute">Both lines start at 0% on the left, so you can compare how much each moved.</p>}
+            {cmp && <p className="mt-2 text-[13px] text-mute">Both lines start at 0% on the left, so you can compare how much each moved.</p>}
           </Card>
 
           {a.position && (
@@ -208,7 +208,7 @@ export default function AssetPage() {
 
       {!desktop && !blockedReason && (
         <div className="fixed inset-x-0 bottom-14 z-20 grid grid-cols-2 gap-2 border-t border-line bg-bg/95 p-3 backdrop-blur">
-          <Button onClick={() => openSheet("buy")}>{closed ? "Queue buy" : "Buy"}</Button>
+          <Button onClick={() => openSheet("buy")}>{closed ? "Buy at the open" : "Buy"}</Button>
           <Button variant="secondary" disabled={!a.position} onClick={() => openSheet("sell")}>{closed ? "Queue sell" : "Sell"}</Button>
         </div>
       )}

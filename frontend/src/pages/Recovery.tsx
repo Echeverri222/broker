@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "../lib/api";
 import { Button, Card, CardTitle } from "../components/ui";
 
-const field = "min-h-[52px] w-full rounded-[14px] border border-line bg-card px-4 text-base font-medium";
+const field = "min-h-[52px] w-full rounded-md border border-line bg-card px-4 text-base font-medium";
 
 function Shell({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -25,7 +25,7 @@ export function ForgotPassword() {
   return (
     <Shell title="Reset your password">
       {m.isSuccess ? (
-        <p role="status" className="text-sm">If there is an account for that email, we sent a link to reset the password. It works for 30 minutes.</p>
+        <p role="status" className="text-sm">If there is an account for that email, we sent a link to reset the password. It works for 30 minutes. It can take a minute to arrive; check your spam folder, and if nothing comes you can ask again.</p>
       ) : (
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); m.mutate(); }}>
           <div><label htmlFor="email" className="mb-1.5 block text-sm font-semibold">Email</label>

@@ -90,7 +90,7 @@ export default function Markets() {
         <label htmlFor="search" className="sr-only">Search assets</label>
         <input id="search" ref={input} type="search" value={text} onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Escape" && text) { e.preventDefault(); setText(""); } }}
-          placeholder="Search by name or ticker  ( / )" className="min-h-12 w-full rounded-full border border-line bg-card pl-11 pr-4" />
+          placeholder="Search by name or ticker  ( / )" className="min-h-12 w-full border border-line bg-card pl-11 pr-4 rounded-md" />
       </div>
 
       <div role="radiogroup" aria-label="Show" className="flex gap-2 overflow-x-auto pb-1">
@@ -102,12 +102,12 @@ export default function Markets() {
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 text-sm text-mute">Sort
-          <select value={f.sort} onChange={(e) => patch({ sort: e.target.value })} className="min-h-11 rounded-xl border border-line bg-card px-3 text-sm font-semibold text-ink">
+          <select value={f.sort} onChange={(e) => patch({ sort: e.target.value })} className="min-h-11 border border-line bg-card px-3 text-sm font-semibold text-ink rounded-md">
             {SORTS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
           </select>
         </label>
         <label className="flex items-center gap-2 text-sm text-mute">Sector
-          <select value={f.sector} onChange={(e) => patch({ sector: e.target.value })} className="min-h-11 rounded-xl border border-line bg-card px-3 text-sm font-semibold text-ink">
+          <select value={f.sector} onChange={(e) => patch({ sector: e.target.value })} className="min-h-11 border border-line bg-card px-3 text-sm font-semibold text-ink rounded-md">
             <option value="">All sectors</option>
             {(meta?.sectors ?? []).map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
@@ -116,13 +116,13 @@ export default function Markets() {
       </div>
       {meta?.fuzzy && rows[0] && <p role="status" className="text-sm text-mute">Showing results for <strong className="text-ink">{rows[0].name}</strong></p>}
 
-      <div className="rounded-[24px] border border-line bg-card">
+      <div className=" border border-line bg-card rounded-md">
         {list.isError ? <div className="p-4"><ErrorBox message="Couldn't load markets." onRetry={() => list.refetch()} /></div>
           : list.isLoading ? <div className="space-y-3 p-4">{Array.from({ length: 8 }, (_, i) => <Skeleton key={i} className="h-14 w-full" />)}</div>
           : rows.length === 0 ? <Empty title="Nothing matches. Try fewer filters." action={<Button className="mt-3" variant="secondary" onClick={clear}>Clear filters</Button>} />
           : (
             <>
-              <div aria-hidden="true" className={`sticky top-16 z-10 hidden gap-4 rounded-t-[24px] border-b border-line bg-card px-5 py-3 text-xs font-semibold text-mute md:grid ${cols}`}>
+              <div aria-hidden="true" className={`sticky top-16 z-10 hidden gap-4 border-b border-line bg-card px-5 py-3 text-[13px] font-semibold text-mute md:grid ${cols}`}>
                 <span>Name</span><span className="text-right">Price</span><span className="text-right">Today</span><span>52-week range</span><span>Last month</span><span className="sr-only">Watch</span>
               </div>
               <ul className="divide-y divide-line">
@@ -133,19 +133,19 @@ export default function Markets() {
                         <Logo symbol={a.symbol} logoUrl={a.logo_url} size={40} />
                         <div className="min-w-0">
                           <Link to={`/assets/${a.symbol}`} className="font-semibold after:absolute after:inset-0 after:content-['']">{a.name}</Link>
-                          <p className="truncate text-xs text-mute">{a.symbol} · <span className="capitalize">{a.kind}</span>{a.sector && a.sector !== "Crypto" ? ` · ${a.sector}` : ""}</p>
+                          <p className="truncate text-[13px] text-mute">{a.symbol} · <span className="capitalize">{a.kind}</span>{a.sector && a.sector !== "Crypto" ? ` · ${a.sector}` : ""}</p>
                         </div>
                       </div>
                       <div className="text-right md:hidden">
                         <p className="font-semibold">{a.quote ? <Money value={a.quote.price} asPrice /> : "–"}</p>
-                        {a.change_percent !== null && <Delta percent={a.change_percent} className="text-xs" />}
+                        {a.change_percent !== null && <Delta percent={a.change_percent} className="text-[13px]" />}
                       </div>
                       <span className="hidden text-right font-semibold md:block">{a.quote ? <Money value={a.quote.price} asPrice /> : "–"}</span>
                       <span className="hidden text-right md:block">{a.change_percent !== null ? <Delta percent={a.change_percent} /> : "–"}</span>
                       <div className="hidden md:block"><RangeBar position={a.week52_position === null ? null : Number(a.week52_position)} label={`${a.symbol} 52-week range`} /></div>
                       <div className="hidden md:block"><Sparkline data={a.spark} /></div>
                       <button type="button" aria-pressed={a.watched} aria-label={`${a.watched ? "Stop watching" : "Watch"} ${a.symbol}`} onClick={() => star.mutate(a)}
-                        className={`${HIT} relative z-10 grid size-11 place-items-center rounded-full hover:bg-well`}>
+                        className={`${HIT} relative z-10 grid size-11 place-items-center hover:bg-well`}>
                         <Star size={18} aria-hidden fill={a.watched ? "currentColor" : "none"} className={a.watched ? "text-amber" : "text-mute"} />
                       </button>
                       <div className="col-span-3 flex items-center justify-end md:hidden"><Sparkline data={a.spark} width={90} height={24} /></div>
