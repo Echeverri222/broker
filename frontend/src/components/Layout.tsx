@@ -62,39 +62,39 @@ export function Layout() {
 
   return (
     <div className="min-h-dvh pb-[72px] md:pb-0">
-      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-card focus:px-3 focus:py-2">Skip to content</a>
+      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:bg-card focus:px-3 focus:py-2">Skip to content</a>
       <header className="sticky top-0 z-20 border-b border-line bg-bg/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-4 px-4 md:gap-6 md:px-8">
           <Link to="/" className="flex items-center gap-2 text-[17px] font-bold tracking-tight">
-            <span aria-hidden className="grid size-8 place-items-center rounded-[10px] bg-accent text-accent-ink"><MarketsIcon size={18} strokeWidth={2.4} /></span>
+            <span aria-hidden className="grid size-8 place-items-center bg-accent text-accent-ink"><MarketsIcon size={18} strokeWidth={2.4} /></span>
             <span>Paper</span>
           </Link>
           <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
             {TABS.map((t) => (
               <NavLink key={t.label} to={t.to} aria-current={current(t.to, t.end) ? "page" : undefined}
-                className={`${HIT} inline-flex min-h-10 items-center rounded-full px-4 text-[15px] font-semibold ${current(t.to, t.end) ? "bg-well text-ink" : "text-mute hover:text-ink"}`}>{t.label}</NavLink>
+                className={`${HIT} inline-flex min-h-10 items-center px-4 text-[15px] font-semibold ${current(t.to, t.end) ? "bg-well text-ink" : "text-mute hover:text-ink"}`}>{t.label}</NavLink>
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-2 md:gap-3">
-            <button type="button" onClick={() => setPicker("search")} aria-label="Search assets" className={`${HIT} hidden min-h-10 items-center gap-2 rounded-full border border-line bg-card px-4 text-sm text-mute hover:text-ink md:inline-flex`}>
-              <Search size={16} aria-hidden /> Search <kbd className="rounded border border-line px-1.5 text-xs">⌘K</kbd>
+            <button type="button" onClick={() => setPicker("search")} aria-label="Search assets" className={`${HIT} hidden min-h-10 items-center gap-2 rounded-md border border-line bg-card px-4 text-sm text-mute hover:text-ink md:inline-flex`}>
+              <Search size={16} aria-hidden /> Search <kbd className=" border border-line px-1.5 text-[13px] rounded-md">⌘K</kbd>
             </button>
-            <button type="button" onClick={() => setPicker("search")} aria-label="Search assets" className={`${HIT} grid size-11 place-items-center rounded-full border border-line md:hidden`}><Search size={18} aria-hidden /></button>
+            <button type="button" onClick={() => setPicker("search")} aria-label="Search assets" className={`${HIT} grid size-11 place-items-center rounded-md border border-line md:hidden`}><Search size={18} aria-hidden /></button>
             <span className="hidden text-sm text-mute lg:block" title={pf && Number(pf.reserved_cash) > 0 ? "Part of your cash is set aside for orders waiting for the market to open" : undefined}>
               Cash <strong className="text-ink">{pf ? <Money value={pf.cash} /> : "–"}</strong>
             </span>
-            <button type="button" onClick={() => setDepositing(true)} className={`${HIT} inline-flex min-h-10 items-center rounded-full bg-accent px-4 text-sm font-semibold text-accent-ink hover:opacity-90`}>Add cash</button>
+            <button type="button" onClick={() => setDepositing(true)} className={`${HIT} inline-flex min-h-10 items-center bg-accent px-4 text-sm font-semibold text-accent-ink hover:opacity-90`}>Add cash</button>
             <div ref={menuRef} className="relative">
               <button type="button" aria-haspopup="menu" aria-expanded={menu} aria-label="Account menu" onClick={() => setMenu((v) => !v)}
-                className={`${HIT} grid size-11 place-items-center rounded-full bg-logo text-sm font-bold`}>{initial}</button>
+                className={`${HIT} grid size-11 place-items-center bg-logo text-sm font-bold`}>{initial}</button>
               {menu && (
-                <div role="menu" aria-label="Account" className="absolute right-0 top-12 z-30 w-56 rounded-2xl border border-line bg-card p-1.5">
-                  <p className="truncate px-3 py-2 text-xs text-mute">{me?.email}</p>
-                  <button role="menuitem" type="button" onClick={() => setPref(dark ? "light" : "dark")} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold hover:bg-well">
+                <div role="menu" aria-label="Account" className="absolute right-0 top-12 z-30 w-56 border border-line bg-card p-1.5 rounded-md">
+                  <p className="truncate px-3 py-2 text-[13px] text-mute">{me?.email}</p>
+                  <button role="menuitem" type="button" onClick={() => setPref(dark ? "light" : "dark")} className="flex min-h-11 w-full items-center gap-3 px-3 text-sm font-semibold hover:bg-well rounded-md">
                     {dark ? <Sun size={16} aria-hidden /> : <Moon size={16} aria-hidden />}{dark ? "Light theme" : "Dark theme"}
                   </button>
-                  <button role="menuitem" type="button" onClick={() => { setMenu(false); nav("/settings"); }} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold hover:bg-well"><Gear size={16} aria-hidden />Settings</button>
-                  <button role="menuitem" type="button" onClick={() => logout.mutate()} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold hover:bg-well"><LogOut size={16} aria-hidden />Sign out</button>
+                  <button role="menuitem" type="button" onClick={() => { setMenu(false); nav("/settings"); }} className="flex min-h-11 w-full items-center gap-3 px-3 text-sm font-semibold hover:bg-well rounded-md"><Gear size={16} aria-hidden />Settings</button>
+                  <button role="menuitem" type="button" onClick={() => logout.mutate()} className="flex min-h-11 w-full items-center gap-3 px-3 text-sm font-semibold hover:bg-well rounded-md"><LogOut size={16} aria-hidden />Sign out</button>
                 </div>
               )}
             </div>

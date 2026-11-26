@@ -180,7 +180,7 @@ describe("Home [HOME-01..08, QA-02]", () => {
   it("splits accounts into cash, set aside and invested with a 3-segment bar [HOME-05]", async () => {
     renderAt("/", <Dashboard />);
     const card = (await screen.findByRole("heading", { name: "Accounts" })).closest("section")!;
-    for (const t of ["Cash to spend", "Set aside for orders", "Invested"]) expect(within(card).getByText(t)).toBeTruthy();
+    for (const t of ["Cash to spend", "Held for waiting orders", "Invested"]) expect(within(card).getByText(t)).toBeTruthy();
     expect(within(card).getByRole("img").getAttribute("aria-label")).toMatch(/cash 100%/i);
     expect(within(card).getByRole("link", { name: /open activity/i })).toBeTruthy();
   });
@@ -266,7 +266,7 @@ describe("Asset page [CHT-01, CHT-02, CHT-11, CHT-14, CHT-15, QA-02]", () => {
   it("puts the trade panel in the right column with a single primary action and chips [CHT-15]", async () => {
     renderAt("/assets/AAPL", <AssetPage />);
     const panel = await screen.findByRole("region", { name: "Trade AAPL" });
-    expect(within(panel).getByRole("button", { name: "Queue buy for Tuesday" })).toBeTruthy();
+    expect(within(panel).getByRole("button", { name: "Buy at the open on Tuesday" })).toBeTruthy();
     for (const c of ["$100", "$500", "$1,000", "All cash"]) expect(within(panel).getByRole("button", { name: c })).toBeTruthy();
     expect(within(panel).getByText("You'll get about")).toBeTruthy();
   });

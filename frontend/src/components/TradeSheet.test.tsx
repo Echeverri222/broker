@@ -48,7 +48,7 @@ function setup(side: "buy" | "sell" = "buy") {
 
 async function reviewAndConfirm(user: ReturnType<typeof userEvent.setup>, value: string) {
   await user.type(screen.getByLabelText(/amount \(usd\)/i), value);
-  await user.click(screen.getByRole("button", { name: /^(buy|sell|queue (buy|sell).*)$/i }));
+  await user.click(screen.getByRole("button", { name: /^(buy|sell|(buy|sell) at the open.*)$/i }));
   await user.click(await screen.findByRole("button", { name: /confirm buy/i }));
 }
 
@@ -61,7 +61,7 @@ describe("TradeSheet", () => {
     await user.type(screen.getByLabelText(/amount \(usd\)/i), "1000");
     expect(screen.getByText(/you'll get about/i)).toBeTruthy();
     expect(screen.getByText(/estimated total/i)).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: /^(buy|sell|queue (buy|sell).*)$/i }));
+    await user.click(screen.getByRole("button", { name: /^(buy|sell|(buy|sell) at the open.*)$/i }));
     await user.click(await screen.findByRole("button", { name: /confirm buy/i }));
     expect(await screen.findByText(/order filled/i)).toBeTruthy();
     expect(screen.getByText("9.99999999 AAPL")).toBeTruthy(); // actual, not estimated (10 AAPL)
@@ -72,7 +72,7 @@ describe("TradeSheet", () => {
   it("blocks input the API would reject, without a request [ORD-02]", async () => {
     const { user } = setup();
     await user.type(screen.getByLabelText(/amount \(usd\)/i), "1.234");
-    await user.click(screen.getByRole("button", { name: /^(buy|sell|queue (buy|sell).*)$/i }));
+    await user.click(screen.getByRole("button", { name: /^(buy|sell|(buy|sell) at the open.*)$/i }));
     expect((await screen.findByRole("alert")).textContent).toMatch(/dollars and cents/i);
     expect(calls.length).toBe(0);
   });
@@ -82,7 +82,7 @@ describe("TradeSheet", () => {
     impl = () => new Promise((r) => (resolve = r));
     const { user } = setup();
     await user.type(screen.getByLabelText(/amount \(usd\)/i), "50");
-    await user.click(screen.getByRole("button", { name: /^(buy|sell|queue (buy|sell).*)$/i }));
+    await user.click(screen.getByRole("button", { name: /^(buy|sell|(buy|sell) at the open.*)$/i }));
     const confirm = await screen.findByRole("button", { name: /confirm buy/i });
     await user.dblClick(confirm);
     expect(calls.length).toBe(1);
@@ -96,12 +96,12 @@ describe("TradeSheet", () => {
     const { user } = setup();
     await reviewAndConfirm(user, "50");
     await waitFor(() => expect(calls.length).toBe(1));
-    await user.click(await screen.findByRole("button", { name: /^(buy|sell|queue (buy|sell).*)$/i }));
+    await user.click(await screen.findByRole("button", { name: /^(buy|sell|(buy|sell) at the open.*)$/i }));
     await user.click(await screen.findByRole("button", { name: /confirm buy/i }));
     await waitFor(() => expect(calls.length).toBe(2));
     expect(calls[1][1]).toBe(calls[0][1]);
     await user.type(screen.getByLabelText(/amount \(usd\)/i), "1");
-    await user.click(screen.getByRole("button", { name: /^(buy|sell|queue (buy|sell).*)$/i }));
+    await user.click(screen.getByRole("button", { name: /^(buy|sell|(buy|sell) at the open.*)$/i }));
     await user.click(await screen.findByRole("button", { name: /confirm buy/i }));
     await waitFor(() => expect(calls.length).toBe(3));
     expect(calls[2][1]).not.toBe(calls[0][1]);
@@ -119,11 +119,11 @@ describe("TradeSheet", () => {
     rejectWith(new ApiError("insufficient_quantity", "You only hold 10.", 422, { max_quantity: "10.00000000", max_amount: "1000.00" }));
     const { user } = setup("sell");
     await user.type(screen.getByLabelText(/amount \(usd\)/i), "5000");
-    await user.click(screen.getByRole("button", { name: /^(buy|sell|queue (buy|sell).*)$/i }));
+    await user.click(screen.getByRole("button", { name: /^(buy|sell|(buy|sell) at the open.*)$/i }));
     await user.click(await screen.findByRole("button", { name: /confirm sell/i }));
     await user.click(await screen.findByRole("button", { name: /sell all/i }));
     resolveWith({ ...filled, order: { ...filled.order, side: "sell" } });
-    await user.click(screen.getByRole("button", { name: /^(buy|sell|queue (buy|sell).*)$/i }));
+    await user.click(screen.getByRole("button", { name: /^(buy|sell|(buy|sell) at the open.*)$/i }));
     await user.click(await screen.findByRole("button", { name: /confirm sell/i }));
     await waitFor(() => expect(calls.length).toBe(2));
     expect(calls[1][0]).toEqual({ symbol: "AAPL", side: "sell", sell_all: true });
@@ -141,12 +141,12 @@ describe("TradeSheet", () => {
     resolveWith({ order: { ...filled.order, status: "pending", quantity: null, price: null, total: null, filled_at: null, amount: "1000.00", requested_quantity: null, sell_all: false, reserved_cash: "1000.00", reject_reason: null, created_at: new Date().toISOString() }, cash: "1000.00", reserved_cash: "1000.00", position: null });
     const { user } = setup();
     await user.type(screen.getByLabelText(/amount \(usd\)/i), "1000");
-    await user.click(screen.getByRole("button", { name: /^(buy|sell|queue (buy|sell).*)$/i }));
+    await user.click(screen.getByRole("button", { name: /^(buy|sell|(buy|sell) at the open.*)$/i }));
     expect(screen.getByText(/market is closed, so this order will be queued/i)).toBeTruthy();
-    await user.click(await screen.findByRole("button", { name: /queue buy/i }));
+    await user.click(await screen.findByRole("button", { name: /buy at the open/i }));
     expect(await screen.findByText(/order queued/i)).toBeTruthy();
     expect(screen.getByText(/nothing has been bought or sold yet/i)).toBeTruthy();
-    expect(screen.getByText("Cash set aside")).toBeTruthy();
+    expect(screen.getByText("Cash held for this order")).toBeTruthy();
     expect(screen.getByRole("link", { name: /view in activity/i })).toBeTruthy();
   });
 });

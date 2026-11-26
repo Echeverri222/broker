@@ -5,7 +5,7 @@ import { useMe } from "../lib/query";
 import { useTheme, type ThemePref } from "../lib/theme";
 import { Button, Card, CardTitle, Segmented } from "../components/ui";
 
-const input = "min-h-11 w-full rounded-xl border border-line bg-well px-3 text-sm";
+const input = "min-h-11 w-full rounded-md border border-line bg-well px-3 text-sm";
 
 /** "Chrome on macOS"-style label from a user agent, without shipping a parser: good enough to recognise your own devices. */
 export function deviceLabel(ua: string | null) {
@@ -29,8 +29,8 @@ function Sessions() {
         {rows.map((s) => (
           <li key={s.id} className="flex items-center justify-between gap-3 py-3">
             <div className="min-w-0">
-              <p className="m-0 truncate text-sm font-medium">{deviceLabel(s.user_agent)}{s.current && <span className="ml-2 rounded-full bg-well px-2 py-0.5 text-xs font-semibold">This device</span>}</p>
-              <p className="m-0 text-xs text-mute">Last active {new Date(s.last_seen_at).toLocaleString()}</p>
+              <p className="m-0 truncate text-sm font-medium">{deviceLabel(s.user_agent)}{s.current && <span className="ml-2 bg-well px-2 py-0.5 text-[13px] font-semibold">This device</span>}</p>
+              <p className="m-0 text-[13px] text-mute">Last active {new Date(s.last_seen_at).toLocaleString()}</p>
             </div>
             {!s.current && <Button variant="secondary" disabled={revoke.isPending} aria-label={`Sign out ${deviceLabel(s.user_agent)}`} onClick={() => revoke.mutate(s.id)}>Sign out</Button>}
           </li>
@@ -54,7 +54,7 @@ function ChangePassword() {
           <input id="current-password" type="password" autoComplete="current-password" className={input} value={current} onChange={(e) => setCurrent(e.target.value)} /></div>
         <div><label htmlFor="next-password" className="mb-1 block text-sm font-semibold">New password</label>
           <input id="next-password" type="password" autoComplete="new-password" className={input} value={next} onChange={(e) => setNext(e.target.value)} />
-          <p className="mt-1 text-xs text-mute">At least 8 characters. Other devices are signed out when you change it.</p></div>
+          <p className="mt-1 text-[13px] text-mute">At least 8 characters. Other devices are signed out when you change it.</p></div>
         <Button type="submit" disabled={m.isPending || !current || next.length < 8}>Change password</Button>
         {m.isSuccess && <p role="status" className="text-sm font-medium">Password changed. Other devices were signed out.</p>}
         {m.isError && <p role="alert" className="text-sm text-loss">{(m.error as Error).message}</p>}
@@ -72,7 +72,7 @@ function Notifications() {
   const row = (key: "notify_order_filled" | "notify_order_rejected", label: string) => (
     <label className="flex min-h-11 items-center justify-between gap-3 text-sm">
       <span>{label}</span>
-      <input type="checkbox" role="switch" checked={prefs[key]} disabled={m.isPending} onChange={(e) => m.mutate({ [key]: e.target.checked })} className="size-5" />
+      <input type="checkbox" role="switch" checked={prefs[key]} disabled={m.isPending} onChange={(e) => m.mutate({ [key]: e.target.checked })} className="size-5 accent-accent" />
     </label>
   );
   return (
@@ -141,12 +141,12 @@ export default function Settings() {
 
   return (
     <div className="mx-auto max-w-xl space-y-5">
-      <h1 className="m-0 text-[32px] font-semibold tracking-[-0.02em]">Settings</h1>
+      <h1 className="m-0 mb-2 text-[32px] font-semibold tracking-[-0.02em]">Settings</h1>
       <Card>
         <CardTitle>Profile</CardTitle>
         <p className="mt-1 text-sm">{me?.name}</p>
         <p className="text-sm text-mute">{me?.email}</p>
-        {me && me.verified === false && <p className="mt-2 text-xs text-mute">Email not confirmed yet.</p>}
+        {me && me.verified === false && <p className="mt-2 text-[13px] text-mute">Email not confirmed yet.</p>}
       </Card>
       <Sessions />
       <ChangePassword />
@@ -162,7 +162,7 @@ export default function Settings() {
         <form className="mt-3 flex flex-wrap gap-2" onSubmit={(e) => { e.preventDefault(); reset.mutate(); }}>
           <label htmlFor="confirm" className="sr-only">Type RESET to confirm</label>
           <input id="confirm" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Type RESET to confirm" autoComplete="off"
-            className="min-h-11 flex-1 rounded-xl border border-line bg-well px-3 text-sm" />
+            className="min-h-11 flex-1 border border-line bg-well px-3 text-sm rounded-md" />
           <Button type="submit" variant="danger" disabled={confirm.trim().toUpperCase() !== "RESET" || reset.isPending}>Reset account</Button>
         </form>
         {done && <p role="status" className="mt-2 text-sm font-medium">Account reset. You're back to your starting cash.</p>}

@@ -47,6 +47,7 @@ export default function App() {
         <Route path="activity" element={<Activity />} />
         <Route path="settings" element={<Settings />} />
       </Route>
+      <Route path="/watchlist" element={<Navigate to="/markets?show=watching" replace />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
